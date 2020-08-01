@@ -1,5 +1,5 @@
 import numpy as np
-from fourier_series import x_dir_alphas, x_dir_betas
+import fourier_series as fs
 
 
 class Hole:
@@ -252,25 +252,32 @@ class Loaded(Hole):
         self.p = bearing
         self.A, self.A_bar, self.B, self.B_bar = self.solve_constants()
 
-    def alphas(self):
+    def alphas(self, N):
         """
+        :param N: <int> number of fourier series terms
         :return: alpha coefficients for x-dir only bearing loads
         """
         h = self.h
         p = self.p
-        return -p / (2 * np.pi * h) * x_dir_alphas
+        # return -p / (np.pi * h) * fs.x_dir_alpha_coefficients(N)
+        # hard coded alpha values used for runtime optimization
+        return -p / (np.pi * h) * fs.x_dir_alphas
 
-    def betas(self):
+    def betas(self, N):
         """
+        :param N: <int> number of fourier series terms
         :return: beta coefficients for x-dir only bearing loads
         """
         h = self.h
         p = self.p
-        return 2 * p / (np.pi * h * 1j) * x_dir_betas
+        m = np.arange(1, N + 1)
+        # return 4 * p / (np.pi * m**2 * h) * fs.x_dir_beta_coefficients(N)
+        # hard coded alpha values used for runtime optimization
+        return 4 * p / (np.pi * m**2 * h) * fs.x_dir_betas
 
     def solve_constants(self):
         """
-        Eq. 37.5 [ref. 2] expanding complex terms and resolving for A, A_bar, B and B_bar (setting Px equal to zero)
+        Eq. 37.5 [ref. 2] expanding complex terms and resolving for A, A_bar, B and B_bar (setting Py equal to zero)
         """
         R1, R2 = np.real(self.mu1), np.imag(self.mu1)
         R3, R4 = np.real(self.mu2), np.imag(self.mu2)
@@ -310,8 +317,8 @@ class Loaded(Hole):
 
         N = 45  # number of fourier series terms [Ref. 3]
         m = np.arange(1, N + 1)
-        alphas = self.alphas()
-        betas = self.betas()
+        alphas = self.alphas(N)
+        betas = self.betas(N)
 
         return 1 / eta_1 * (A - np.sum(m * (betas - mu2 * alphas) / (mu1 - mu2) / ksi_1 ** m))
 
@@ -330,8 +337,8 @@ class Loaded(Hole):
 
         N = 45  # number of fourier series terms [Ref. 3]
         m = np.arange(1, N + 1)
-        alphas = self.alphas()
-        betas = self.betas()
+        alphas = self.alphas(N)
+        betas = self.betas(N)
 
         return 1 / eta_2 * (B + np.sum(m * (betas - mu1 * alphas) / (mu1 - mu2) / ksi_2 ** m))
 
