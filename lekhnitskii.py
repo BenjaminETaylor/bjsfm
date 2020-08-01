@@ -272,7 +272,7 @@ class Loaded(Hole):
         p = self.p
         m = np.arange(1, N + 1)
         # return 4 * p / (np.pi * m**2 * h) * fs.x_dir_beta_coefficients(N)
-        # hard coded alpha values used for runtime optimization
+        # hard coded beta values used for runtime optimization
         return 4 * p / (np.pi * m**2 * h) * fs.x_dir_betas
 
     def solve_constants(self):
