@@ -4,42 +4,51 @@ import fourier_series as fs
 
 class Hole:
     """
-    Class for defining a hole in an anisotropic plate for stress
-    calculations.
+    Parent class for defining a hole in an anisotropic plate for laminated composites
 
-    References:
-        1. "Stress distribution and strength prediction of composite
-        laminates with multiple holes" by Esp, Brian, Ph.D.,
-        The University of Texas at Arlington, 2007, 177; 3295219
-        2. Lekhnitskii, S.G. (1968), "Anisotropic Plates", 2nd Ed.,
-        Translated from the 2nd Russian Ed. by S.W. Tsai and Cheron,
-        Bordon and Breach.
-        3. Garbo, S.P. and Ogonowski, J.M., "Effect of Variances and
-        Manufacturing Tolerances on the Design Strength and Life of
-        Mechanically Fastened Composite Joints", AFWAL-TR-81-3041,
-        Volumes 1, 2 and 3, April 1981
-        4. J. P. Waszczak and T. A. Cruse, "A Synthesis Procedure for
-        Mechanically Fastened Joints in Advanced Composite Materials",
-        AFML-TR-73-145, Volume II, 1973.
+    Attributes
+    ----------
+    :ivar r: the hole radius
+    :ivar a: inverse a-matrix of the laminate
+    :ivar h: thickness of the laminate
+    :ivar mu1: real part of first root of characteristic equation
+    :ivar mu2: real part of second root of characteristic equation
+    :ivar mu1_bar: imaginary part of first root of characteristic equation
+    :ivar mu2_bar: imaginary part of second root of characteristic equation
 
+
+    References
+    ----------
+    .. [1] Esp, B. (2007). *Stress distribution and strength prediction of composite
+           laminates with multiple holes* (PhD thesis). Retrieved from
+           https://rc.library.uta.edu/uta-ir/bitstream/handle/10106/767/umi-uta-1969.pdf?sequence=1&isAllowed=y
+    .. [2] Lekhnitskii, S., Tsai, S., & Cheron, T. (1987). *Anisotropic plates* (2nd ed.).
+           New York: Gordon and Breach science.
+    .. [3] Garbo, S. and Ogonowski, J. (1981) *Effect of variances and manufacturing
+           tolerances on the design strength and life of mechanically fastened
+           composite joints* (Vol. 1,2,3). AFWAL-TR-81-3041.
+    .. [4] Waszczak, J.P. and Cruse T.A. (1973) *A synthesis procedure for mechanically
+           fastened joints in advanced composite materials* (Vol. II). AFML-TR-73-145.
     """
 
-    def __init__(self, radius, thickness, a_matrix):
+    def __init__(self, diameter, thickness, a_inv):
         """
-        Class contructor.
+        Constructor
 
-        :param radius: hole radius
+        :param diameter: hole diameter
         :param thickness: laminate thickness
-        :param a_matrix: <np.array> inverser laminate A-matrix
+        :param a_inv: <np.array> inverse laminate A-matrix
         """
-        self.r = radius
-        self.a = a_matrix
+        self.r = diameter/2.
+        self.a = a_inv
         self.h = thickness
         self.mu1, self.mu2, self.mu1_bar, self.mu2_bar = self.roots()
 
     def roots(self):
         """
         Finds the roots to the characteristic equation [Eq. A.2, Ref. 1]
+
+        :raises: ValueError if roots cannot be found
         """
         a11 = self.a[0, 0]
         a12 = self.a[0, 1]
@@ -51,20 +60,20 @@ class Hole:
         roots = np.roots([a11, -2 * a16, (2 * a12 + a66), -2 * a26, a22])
 
         if np.imag(roots[0]) >= 0.0:
-            mu1 = roots[0]
-            mu1_bar = roots[1]
+            mu2 = roots[0]
+            mu2_bar = roots[1]
         elif np.imag(roots[1]) >= 0.0:
-            mu1 = roots[1]
-            mu1_bar = roots[0]
+            mu2 = roots[1]
+            mu2_bar = roots[0]
         else:
             raise ValueError("mu1 cannot be solved")
 
         if np.imag(roots[2]) >= 0.0:
-            mu2 = roots[2]
-            mu2_bar = roots[3]
+            mu1 = roots[2]
+            mu1_bar = roots[3]
         elif np.imag(roots[3]) >= 0.0:
-            mu2 = roots[3]
-            mu2_bar = roots[2]
+            mu1 = roots[3]
+            mu1_bar = roots[2]
         else:
             raise ValueError("mu2 cannot be solved")
 
@@ -147,23 +156,26 @@ class Hole:
         return np.array([sx, sy, sxy])
 
 
-class Unloaded(Hole):
+class UnloadedHole(Hole):
     """
     Class for defining an unloaded hole in an anisotropic homogeneous plate
-    with farfield forces (Nx, Ny, Nxy) [force / unit length] applied.
+
+    Notes
+    -----
+        farfield forces (Nx, Ny, Nxy) are force/unit length
     """
 
-    def __init__(self, radius, thickness, a_matrix, bypass):
+    def __init__(self, diameter, thickness, a_inv, loads):
         """
         Class constructor.
 
-        :param radius: hole radius
+        :param diameter: hole diameter
         :param thickness: laminate thickness
-        :param a_matrix: inverse laminate A-matrix
-        :param bypass: [Nx, Ny, Nxy] force / unit length
+        :param a_inv: inverse laminate A-matrix
+        :param loads: <array-like> [Nx, Ny, Nxy] force / unit length
         """
-        super().__init__(radius, thickness, a_matrix)
-        self.applied_stress = np.array(bypass) / self.h
+        super().__init__(diameter, thickness, a_inv)
+        self.applied_stress = np.array(loads) / self.h
 
     def alpha(self):
         """
@@ -235,21 +247,21 @@ class Unloaded(Hole):
         return np.array([sx + sx_app, sy + sy_app, sxy + sxy_app])
 
 
-class Loaded(Hole):
+class LoadedHole(Hole):
     """
     Class for defining a loaded hole in an anisotropic homogeneous plate
-    with bearing force (Px only) applied [Fig. 10, Ref. 4].
+    with bearing force applied [Fig. 10, Ref. [4]_].
     """
 
-    def __init__(self, radius, thickness, a_matrix, bearing):
+    def __init__(self, load, diameter, thickness, a_matrix):
         """
-        :param radius: Hole radius
+        :param load: bearing force
+        :param diameter: Hole diameter
         :param thickness: laminate thickness
         :param a_matrix: inverse laminate A-matrix
-        :param bearing: bearing force (x-dir only)
         """
-        super().__init__(radius, thickness, a_matrix)
-        self.p = bearing
+        super().__init__(diameter, thickness, a_matrix)
+        self.p = load
         self.A, self.A_bar, self.B, self.B_bar = self.solve_constants()
 
     def alphas(self, N):
@@ -259,6 +271,7 @@ class Loaded(Hole):
         """
         h = self.h
         p = self.p
+
         # return -p / (np.pi * h) * fs.x_dir_alpha_coefficients(N)
         # hard coded alpha values used for runtime optimization
         return -p / (np.pi * h) * fs.x_dir_alphas
@@ -271,6 +284,7 @@ class Loaded(Hole):
         h = self.h
         p = self.p
         m = np.arange(1, N + 1)
+
         # return 4 * p / (np.pi * m**2 * h) * fs.x_dir_beta_coefficients(N)
         # hard coded beta values used for runtime optimization
         return 4 * p / (np.pi * m**2 * h) * fs.x_dir_betas

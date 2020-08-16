@@ -101,6 +101,7 @@ def x_dir_beta_coefficients(N):
 
 
 # alpha coefficients for N=45 [as chosen in Ref. 3]
+# x_dir_alphas = x_dir_alpha_coefficients(45)
 x_dir_alphas = np.array([
     2.12206536e-01+9.25185854e-18j,  1.25000000e-01+1.35693925e-17j,
     4.24414843e-02+1.99025668e-17j,  1.04926677e-17+5.08640204e-18j,
@@ -128,6 +129,7 @@ x_dir_alphas = np.array([
 ])
 
 # beta coefficients for N=45 [as chosen in Ref. 3]
+# x_dir_betas = x_dir_beta_coefficients(45)
 x_dir_betas = np.array([
     1.04854397e-17-1.06168002e-01j,  2.03540888e-17-1.25000000e-01j,
     1.25837142e-17-6.35970496e-02j, -5.93907888e-18+1.51306437e-18j,
