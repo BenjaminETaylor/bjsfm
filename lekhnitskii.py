@@ -60,20 +60,20 @@ class Hole:
         roots = np.roots([a11, -2 * a16, (2 * a12 + a66), -2 * a26, a22])
 
         if np.imag(roots[0]) >= 0.0:
-            mu2 = roots[0]
-            mu2_bar = roots[1]
+            mu1 = roots[0]
+            mu1_bar = roots[1]
         elif np.imag(roots[1]) >= 0.0:
-            mu2 = roots[1]
-            mu2_bar = roots[0]
+            mu1 = roots[1]
+            mu1_bar = roots[0]
         else:
             raise ValueError("mu1 cannot be solved")
 
         if np.imag(roots[2]) >= 0.0:
-            mu1 = roots[2]
-            mu1_bar = roots[3]
+            mu2 = roots[2]
+            mu2_bar = roots[3]
         elif np.imag(roots[3]) >= 0.0:
-            mu1 = roots[3]
-            mu1_bar = roots[2]
+            mu2 = roots[3]
+            mu2_bar = roots[2]
         else:
             raise ValueError("mu2 cannot be solved")
 
@@ -90,10 +90,10 @@ class Hole:
         ksi_1_pos = (z1 + np.sqrt(z1 * z1 - a * a - mu1 * mu1 * b * b)) / (a - 1j * mu1 * b)
         ksi_1_neg = (z1 - np.sqrt(z1 * z1 - a * a - mu1 * mu1 * b * b)) / (a - 1j * mu1 * b)
 
-        if np.abs(ksi_1_pos) >= 1.0 - 1.0e-15:
+        if np.abs(ksi_1_pos) >= 1.0:
             ksi_1 = ksi_1_pos
             sign_1 = 1
-        elif np.abs(ksi_1_neg) >= 1.0 - 1.0e-15:
+        elif np.abs(ksi_1_neg) >= 1.0:
             ksi_1 = ksi_1_neg
             sign_1 = -1
         else:
@@ -114,10 +114,10 @@ class Hole:
         ksi_2_pos = (z2 + np.sqrt(z2 * z2 - a * a - mu2 * mu2 * b * b)) / (a - 1j * mu2 * b)
         ksi_2_neg = (z2 - np.sqrt(z2 * z2 - a * a - mu2 * mu2 * b * b)) / (a - 1j * mu2 * b)
 
-        if np.abs(ksi_2_pos) >= 1.0 - 1.0e-15:
+        if np.abs(ksi_2_pos) >= 1.0:
             ksi_2 = ksi_2_pos
             sign_2 = 1
-        elif np.abs(ksi_2_neg) >= 1.0 - 1.0e-15:
+        elif np.abs(ksi_2_neg) >= 1.0:
             ksi_2 = ksi_2_neg
             sign_2 = -1
         else:
@@ -165,14 +165,14 @@ class UnloadedHole(Hole):
         farfield forces (Nx, Ny, Nxy) are force/unit length
     """
 
-    def __init__(self, diameter, thickness, a_inv, loads):
+    def __init__(self, loads, diameter, thickness, a_inv):
         """
         Class constructor.
 
+        :param loads: <array-like> [Nx, Ny, Nxy] force / unit length
         :param diameter: hole diameter
         :param thickness: laminate thickness
         :param a_inv: inverse laminate A-matrix
-        :param loads: <array-like> [Nx, Ny, Nxy] force / unit length
         """
         super().__init__(diameter, thickness, a_inv)
         self.applied_stress = np.array(loads) / self.h
@@ -252,6 +252,7 @@ class LoadedHole(Hole):
     Class for defining a loaded hole in an anisotropic homogeneous plate
     with bearing force applied [Fig. 10, Ref. [4]_].
     """
+    FOURIER_TERMS = 45  # number of fourier series terms [Ref. 3]
 
     def __init__(self, load, diameter, thickness, a_matrix):
         """
@@ -264,25 +265,27 @@ class LoadedHole(Hole):
         self.p = load
         self.A, self.A_bar, self.B, self.B_bar = self.solve_constants()
 
-    def alphas(self, N):
+    def alphas(self):
         """
         :param N: <int> number of fourier series terms
         :return: alpha coefficients for x-dir only bearing loads
         """
         h = self.h
         p = self.p
+        # N = self.FOURIER_TERMS
 
         # return -p / (np.pi * h) * fs.x_dir_alpha_coefficients(N)
         # hard coded alpha values used for runtime optimization
         return -p / (np.pi * h) * fs.x_dir_alphas
 
-    def betas(self, N):
+    def betas(self):
         """
         :param N: <int> number of fourier series terms
         :return: beta coefficients for x-dir only bearing loads
         """
         h = self.h
         p = self.p
+        N = self.FOURIER_TERMS
         m = np.arange(1, N + 1)
 
         # return 4 * p / (np.pi * m**2 * h) * fs.x_dir_beta_coefficients(N)
@@ -303,18 +306,18 @@ class LoadedHole(Hole):
         a16 = self.a[0, 2]
         pi = np.pi
 
-        mu_mat = np.array([[0., 1., 0., 1.],
+        mu_mat = np.array([[0., 1, 0., 1.],
                            [R2, R1, R4, R3],
-                           [2 * R1 * R2, R1 ** 2 - R2 ** 2, 2 * R3 * R4, R3 ** 2 - R4 ** 2],
-                           [R2 / (R1 ** 2 + R2 ** 2), -R1 / (R1 ** 2 + R2 ** 2), R4 / (R3 ** 2 + R4 ** 2),
-                            -R3 / (R3 ** 2 + R4 ** 2)]])
+                           [2*R1*R2, (R1**2 - R2**2), 2*R3*R4, (R3**2 - R4**2)],
+                           [R2/(R1**2 + R2**2), -R1/(R1**2 + R2**2), R4/(R3**2 + R4**2), -R3/(R3**2 + R4**2)]])
 
-        load_vec = p / (4. * pi * h) * np.array([[0.],
-                                                 [1.],
-                                                 [a16 / a11],
-                                                 [a12 / a22]])
+        load_vec = p/(4.*pi*h) * np.array([[0.],
+                                           [1.],
+                                           [a16/a11],
+                                           [a12/a22]])
 
-        return np.dot(np.linalg.inv(mu_mat), load_vec)
+        A1, A2, B1, B2 = np.dot(np.linalg.inv(mu_mat), load_vec)
+        return A1, A2, B1, B2
 
     def phi_1_prime(self, z1):
         """
@@ -325,14 +328,14 @@ class LoadedHole(Hole):
         a = self.r
         b = self.r
         A = self.A + 1j * self.A_bar
+        N = self.FOURIER_TERMS
         ksi_1, sign_1 = self.ksi_1(z1)
 
         eta_1 = sign_1 * np.sqrt(z1 * z1 - a * a - b * b * mu1 * mu1)
 
-        N = 45  # number of fourier series terms [Ref. 3]
         m = np.arange(1, N + 1)
-        alphas = self.alphas(N)
-        betas = self.betas(N)
+        alphas = self.alphas()
+        betas = self.betas()
 
         return 1 / eta_1 * (A - np.sum(m * (betas - mu2 * alphas) / (mu1 - mu2) / ksi_1 ** m))
 
@@ -345,14 +348,14 @@ class LoadedHole(Hole):
         a = self.r
         b = self.r
         B = self.B + 1j * self.B_bar
+        N = self.FOURIER_TERMS
         ksi_2, sign_2 = self.ksi_2(z2)
 
         eta_2 = sign_2 * np.sqrt(z2 * z2 - a * a - b * b * mu2 * mu2)
 
-        N = 45  # number of fourier series terms [Ref. 3]
         m = np.arange(1, N + 1)
-        alphas = self.alphas(N)
-        betas = self.betas(N)
+        alphas = self.alphas()
+        betas = self.betas()
 
         return 1 / eta_2 * (B + np.sum(m * (betas - mu1 * alphas) / (mu1 - mu2) / ksi_2 ** m))
 
