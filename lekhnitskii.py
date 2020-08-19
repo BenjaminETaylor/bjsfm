@@ -272,7 +272,7 @@ class LoadedHole(Hole):
         """
         h = self.h
         p = self.p
-        # N = self.FOURIER_TERMS
+        N = self.FOURIER_TERMS
 
         # return -p / (np.pi * h) * fs.x_dir_alpha_coefficients(N)
         # hard coded alpha values used for runtime optimization
