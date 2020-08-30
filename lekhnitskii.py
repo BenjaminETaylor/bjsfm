@@ -1,54 +1,76 @@
+import abc
 import numpy as np
 import fourier_series as fs
 
 
-class Hole:
-    """
-    Parent class for defining a hole in an anisotropic plate for laminated composites
+class Hole(abc.ABC):
+    """Abstract parent class for defining a hole in an anisotropic infinite plate
+
+    This class defines shared methods and attributes for anisotropic elasticity solutions of plates with circular
+    holes.
+
+    Notes
+    -----
+    This is an abstract class, do not instantiate this class.
+
+    Parameters
+    ----------
+    diameter : float
+        hole diameter
+    thickness : float
+        laminate thickness
+    a_inv : (3, 3) array-like
+        inverse laminate A-matrix
 
     Attributes
     ----------
-    :ivar r: the hole radius
-    :ivar a: inverse a-matrix of the laminate
-    :ivar h: thickness of the laminate
-    :ivar mu1: real part of first root of characteristic equation
-    :ivar mu2: real part of second root of characteristic equation
-    :ivar mu1_bar: imaginary part of first root of characteristic equation
-    :ivar mu2_bar: imaginary part of second root of characteristic equation
-
+    r : float
+        the hole radius
+    a : (3, 3) ndarray
+        inverse a-matrix of the laminate
+    h : float
+        thickness of the laminate
+    mu1 : float
+        real part of first root of characteristic equation
+    mu2 : float
+        real part of second root of characteristic equation
+    mu1_bar : float
+        imaginary part of first root of characteristic equation
+    mu2_bar : float
+        imaginary part of second root of characteristic equation
 
     References
     ----------
     .. [1] Esp, B. (2007). *Stress distribution and strength prediction of composite
-           laminates with multiple holes* (PhD thesis). Retrieved from
-           https://rc.library.uta.edu/uta-ir/bitstream/handle/10106/767/umi-uta-1969.pdf?sequence=1&isAllowed=y
+       laminates with multiple holes* (PhD thesis). Retrieved from
+       https://rc.library.uta.edu/uta-ir/bitstream/handle/10106/767/umi-uta-1969.pdf?sequence=1&isAllowed=y
     .. [2] Lekhnitskii, S., Tsai, S., & Cheron, T. (1987). *Anisotropic plates* (2nd ed.).
-           New York: Gordon and Breach science.
+       New York: Gordon and Breach science.
     .. [3] Garbo, S. and Ogonowski, J. (1981) *Effect of variances and manufacturing
-           tolerances on the design strength and life of mechanically fastened
-           composite joints* (Vol. 1,2,3). AFWAL-TR-81-3041.
+       tolerances on the design strength and life of mechanically fastened
+       composite joints* (Vol. 1,2,3). AFWAL-TR-81-3041.
     .. [4] Waszczak, J.P. and Cruse T.A. (1973) *A synthesis procedure for mechanically
-           fastened joints in advanced composite materials* (Vol. II). AFML-TR-73-145.
+       fastened joints in advanced composite materials* (Vol. II). AFML-TR-73-145.
     """
 
     def __init__(self, diameter, thickness, a_inv):
-        """
-        Constructor
-
-        :param diameter: hole diameter
-        :param thickness: laminate thickness
-        :param a_inv: <np.array> inverse laminate A-matrix
-        """
         self.r = diameter/2.
-        self.a = a_inv
+        self.a = np.array(a_inv)
         self.h = thickness
         self.mu1, self.mu2, self.mu1_bar, self.mu2_bar = self.roots()
 
     def roots(self):
-        """
-        Finds the roots to the characteristic equation [Eq. A.2, Ref. 1]
+        """ Finds the roots to the characteristic equation (Eq. A.2 [1]_, Eq. 7.4 [2]_)
 
-        :raises: ValueError if roots cannot be found
+        Notes
+        -----
+        .. math:: a_11\mu^4-2a_16\mu^3+(2a_12+a_66)\mu^2-2a_26\mu+a_22=0
+
+        Raises
+        ------
+        ValueError
+            If roots cannot be found
+
         """
         a11 = self.a[0, 0]
         a12 = self.a[0, 1]
@@ -79,59 +101,101 @@ class Hole:
 
         return mu1, mu2, mu1_bar, mu2_bar
 
-    def ksi_1(self, z1):
-        """
-        Calculates the first mapping parameter [Eq. A.4 & Eq. A.5, Ref. 1]
+    def xi_1(self, z1):
+        """ Calculates the first mapping parameter (Eq. A.4 & Eq. A.5, [1]_, Eq. 37.4 [2]_)
+
+        Notes
+        -----
+        .. math:: \xi_1=\dfrac{z_1\pm\sqrt{z_1^2-a^2-\mu_1^2b^2}}{a-i\mu_1b}
+
+        Parameters
+        ----------
+        z1 : complex
+            first parameter from the complex plane :math: `z_1=x+\mu_1y`
+
+        Returns
+        -------
+        xi_1 : complex
+            the first mapping parameter
+        sign_1: int
+            sign producing positive mapping parameter
+
+        Raises
+        ------
+        ValueError
+            if mapping parameter cannot be solved
+
         """
         mu1 = self.mu1
         a = self.r
         b = self.r
 
-        ksi_1_pos = (z1 + np.sqrt(z1 * z1 - a * a - mu1 * mu1 * b * b)) / (a - 1j * mu1 * b)
-        ksi_1_neg = (z1 - np.sqrt(z1 * z1 - a * a - mu1 * mu1 * b * b)) / (a - 1j * mu1 * b)
+        xi_1_pos = (z1 + np.sqrt(z1 * z1 - a * a - mu1 * mu1 * b * b)) / (a - 1j * mu1 * b)
+        xi_1_neg = (z1 - np.sqrt(z1 * z1 - a * a - mu1 * mu1 * b * b)) / (a - 1j * mu1 * b)
 
-        if np.abs(ksi_1_pos) >= 1.0:
-            ksi_1 = ksi_1_pos
+        if np.abs(xi_1_pos) >= 1.0:
+            xi_1 = xi_1_pos
             sign_1 = 1
-        elif np.abs(ksi_1_neg) >= 1.0:
-            ksi_1 = ksi_1_neg
+        elif np.abs(xi_1_neg) >= 1.0:
+            xi_1 = xi_1_neg
             sign_1 = -1
         else:
             raise ValueError(
-                "ksi_1 unsolvable:\n ksi_1_pos={0}, ksi_1_neg={1}".format(
-                    ksi_1_pos, ksi_1_neg))
+                "xi_1 unsolvable:\n xi_1_pos={0}, xi_1_neg={1}".format(
+                    xi_1_pos, xi_1_neg))
 
-        return ksi_1, sign_1
+        return xi_1, sign_1
 
-    def ksi_2(self, z2):
-        """
-        Calculates the second mapping parameter [Eq. A.4 & Eq. A.5, Ref. 1]
+    def xi_2(self, z2):
+        """ Calculates the first mapping parameter (Eq. A.4 & Eq. A.5, [1]_, Eq. 37.4 [2]_)
+
+        Notes
+        -----
+        .. math:: \xi_2=\dfrac{z_2\pm\sqrt{z_2^2-a^2-\mu_2^2b^2}}{a-i\mu_2b}
+
+        Parameters
+        ----------
+        z2 : complex
+            second parameter from the complex plane :math: `z_2=x+\mu_2y`
+
+        Returns
+        -------
+        xi_2 : complex
+            the second mapping parameter
+        sign_2: int
+            sign producing positive mapping parameter
+
+        Raises
+        ------
+        ValueError
+            if mapping parameter cannot be solved
+
         """
         mu2 = self.mu2
         a = self.r
         b = self.r
 
-        ksi_2_pos = (z2 + np.sqrt(z2 * z2 - a * a - mu2 * mu2 * b * b)) / (a - 1j * mu2 * b)
-        ksi_2_neg = (z2 - np.sqrt(z2 * z2 - a * a - mu2 * mu2 * b * b)) / (a - 1j * mu2 * b)
+        xi_2_pos = (z2 + np.sqrt(z2 * z2 - a * a - mu2 * mu2 * b * b)) / (a - 1j * mu2 * b)
+        xi_2_neg = (z2 - np.sqrt(z2 * z2 - a * a - mu2 * mu2 * b * b)) / (a - 1j * mu2 * b)
 
-        if np.abs(ksi_2_pos) >= 1.0:
-            ksi_2 = ksi_2_pos
+        if np.abs(xi_2_pos) >= 1.0:
+            xi_2 = xi_2_pos
             sign_2 = 1
-        elif np.abs(ksi_2_neg) >= 1.0:
-            ksi_2 = ksi_2_neg
+        elif np.abs(xi_2_neg) >= 1.0:
+            xi_2 = xi_2_neg
             sign_2 = -1
         else:
             raise ValueError(
-                "ksi_1 unsolvable:\n ksi_1_pos={0}, ksi_1_neg={1}".format(
-                    ksi_2_pos, ksi_2_neg))
+                "xi_2 unsolvable:\n xi_2_pos={0}, xi_2_neg={1}".format(
+                    xi_2_pos, xi_2_neg))
 
-        return ksi_2, sign_2
+        return xi_2, sign_2
 
-    # @abc.abstractclassmethod()
+    @abc.abstractmethod
     def phi_1_prime(self, z1):
         raise NotImplementedError("You must implement this function.")
 
-    # @abc.abstractclassmethod()
+    @abc.abstractmethod
     def phi_2_prime(self, z2):
         raise NotImplementedError("You must implement this function.")
 
@@ -157,8 +221,10 @@ class Hole:
 
 
 class UnloadedHole(Hole):
-    """
-    Class for defining an unloaded hole in an anisotropic homogeneous plate
+    """ Class for defining an unloaded hole in an anisotropic homogeneous plate
+
+    An infinite anisotropic plate with a circular hole loaded at infinity with forces in the x, y and xy (shear)
+    directions.
 
     Notes
     -----
@@ -207,13 +273,13 @@ class UnloadedHole(Hole):
         mu2 = self.mu2
         alpha = self.alpha()
         beta = self.beta()
-        ksi_1, sign_1 = self.ksi_1(z1)
+        xi_1, sign_1 = self.xi_1(z1)
 
         C1 = (beta - mu2 * alpha) / (mu1 - mu2)
         eta1 = sign_1 * np.sqrt(z1 * z1 - a * a - mu1 * mu1 * b * b)
         kappa1 = 1 / (a - 1j * mu1 * b)
 
-        return -C1 / (ksi_1 ** 2) * (1 + z1 / eta1) * kappa1
+        return -C1 / (xi_1 ** 2) * (1 + z1 / eta1) * kappa1
 
     def phi_2_prime(self, z2):
         """
@@ -225,13 +291,13 @@ class UnloadedHole(Hole):
         mu2 = self.mu2
         alpha = self.alpha()
         beta = self.beta()
-        ksi_2, sign_2 = self.ksi_2(z2)
+        xi_2, sign_2 = self.xi_2(z2)
 
         C2 = -(beta - mu1 * alpha) / (mu1 - mu2)
         eta2 = sign_2 * np.sqrt(z2 * z2 - a * a - mu2 * mu2 * b * b)
         kappa2 = 1 / (a - 1j * mu2 * b)
 
-        return -C2 / (ksi_2 ** 2) * (1 + z2 / eta2) * kappa2
+        return -C2 / (xi_2 ** 2) * (1 + z2 / eta2) * kappa2
 
     def stress(self, x, y):
         """
@@ -329,7 +395,7 @@ class LoadedHole(Hole):
         b = self.r
         A = self.A + 1j * self.A_bar
         N = self.FOURIER_TERMS
-        ksi_1, sign_1 = self.ksi_1(z1)
+        xi_1, sign_1 = self.xi_1(z1)
 
         eta_1 = sign_1 * np.sqrt(z1 * z1 - a * a - b * b * mu1 * mu1)
 
@@ -337,7 +403,7 @@ class LoadedHole(Hole):
         alphas = self.alphas()
         betas = self.betas()
 
-        return 1 / eta_1 * (A - np.sum(m * (betas - mu2 * alphas) / (mu1 - mu2) / ksi_1 ** m))
+        return 1 / eta_1 * (A - np.sum(m * (betas - mu2 * alphas) / (mu1 - mu2) / xi_1 ** m))
 
     def phi_2_prime(self, z2):
         """
@@ -349,7 +415,7 @@ class LoadedHole(Hole):
         b = self.r
         B = self.B + 1j * self.B_bar
         N = self.FOURIER_TERMS
-        ksi_2, sign_2 = self.ksi_2(z2)
+        xi_2, sign_2 = self.xi_2(z2)
 
         eta_2 = sign_2 * np.sqrt(z2 * z2 - a * a - b * b * mu2 * mu2)
 
@@ -357,6 +423,6 @@ class LoadedHole(Hole):
         alphas = self.alphas()
         betas = self.betas()
 
-        return 1 / eta_2 * (B + np.sum(m * (betas - mu1 * alphas) / (mu1 - mu2) / ksi_2 ** m))
+        return 1 / eta_2 * (B + np.sum(m * (betas - mu1 * alphas) / (mu1 - mu2) / xi_2 ** m))
 
 
