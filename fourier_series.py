@@ -2,31 +2,37 @@ import numpy as np
 
 
 def fourier_series_coefficients(f, T, N, return_complex=True, sample_rate=1000):
-    """
-    Ref: https://stackoverflow.com/questions/4258106/how-to-calculate-a-fourier-series-in-numpy
-
-    Calculates the first 2*N+1 Fourier series coeff. of a periodic function.
+    """Calculates the first 2*N+1 Fourier series coeff. of a periodic function.
 
     Given a periodic, function f(t) with period T, this function returns the
     complex coefficients {c0,c1,c2,...}
     such that:
 
-    f(t) ~= sum_{k=-N}^{N} c_k * exp(i*2*pi*k*t/T)
+    .. math:: f(t) ~= \sum_{k=-N}^N c_k \cdot e^{i2 \pi kt/T}
 
-    where we define c_{-n} = complex_conjugate(c_{n})
+    where we define :math: `c_{-n}=\overline{c_n}`
 
-    Refer to wikipedia for the relation between the real-valued and complex
-    valued coeffs at http://en.wikipedia.org/wiki/Fourier_series.
+    Refer to `wikipedia <http://en.wikipedia.org/wiki/Fourier_series>`_ for the relation between the real-valued and
+    complex valued coeffs.
+
+    Notes
+    -----
+    This function was copied from
+    `stackoverflow <https://stackoverflow.com/questions/4258106/how-to-calculate-a-fourier-series-in-numpy>`_.
 
     Parameters
     ----------
-    f : the periodic function, a callable like f(t)
-    T : the period of the function f, so that f(0)==f(T)
-    N : the function will return the first N+1 Fourier coeff.
+    f : callable
+        the periodic function, a callable like f(t)
+    T : float
+        the period of the function f, so that f(0)==f(T)
+    N : int
+        the function will return the first N+1 Fourier coeff.
 
     Returns
     -------
-    c : numpy 1-dimensional complex-valued array of size N+1
+    ndarray
+        numpy 1-dimensional complex-valued array of size N+1
 
     """
     # From Shanon theorem we must use a sampling freq. larger than the maximum
@@ -51,15 +57,27 @@ def fourier_series_coefficients(f, T, N, return_complex=True, sample_rate=1000):
 
 
 def x_dir_alpha_coefficients(N):
-    """
-    Calculates alpha coefficients for x-direction only loaded holes [used in Eq. 37.6, Ref. 2]
-    :param N: <positive int> number of fourier series coefficients
-    :return: fourier series coefficients
+    """ Calculates alpha coefficients for x-direction loaded holes
+
+    This function calculates the fourier series coefficients used in Eq. 37.6 [2]_.
+
+    Parameters
+    __________
+    N : <positive int>
+        number of fourier series coefficients
+
+    Returns
+    -------
+    ndarray
+        fourier series coefficients
     """
     def brg_load_x_component(thetas):
-        """
-        Cosine load distribution [Fig. 10, Ref. 4]
-        :param thetas: <np.array> angles
+        """ Cosine load distribution Fig. 10 [4]_
+
+        Parameters
+        ----------
+        thetas : ndarray
+            angles
         """
         new_array = np.zeros(len(thetas))
         for i, theta in enumerate(thetas):
@@ -67,23 +85,35 @@ def x_dir_alpha_coefficients(N):
             if -np.pi / 2 <= theta <= np.pi / 2:
                 # x-direction component of cosine load distribution
                 # (in Ref. 2 Eq. 37.2, alpha is associated with the Y-direction. Can someone explain?)
-                new_array[i] = np.cos(theta) ** 2
+                new_array[i] = np.cos(theta)**2
         return new_array
 
     # return all coefficients except the first one (Ao)
-    return fourier_series_coefficients(brg_load_x_component, 2 * np.pi, N, sample_rate=1000)[1:]
+    return fourier_series_coefficients(brg_load_x_component, 2 * np.pi, N, sample_rate=100000)[1:]
 
 
 def x_dir_beta_coefficients(N):
-    """
-    Calculates beta coefficients for x-direction only loaded holes [used in Eq. 37.6, Ref. 2]
-    :param N: <positive int> number of fourier series coefficients
-    :return: fourier series coefficients
+    """ Calculates beta coefficients for x-direction loaded holes
+
+    This function calculates the fourier series coefficients using in Eq. 37.6 [2]_.
+
+    Parameters
+    ----------
+    N : <positive int>
+        number of fourier series coefficients
+
+    Returns
+    -------
+    ndarray
+        fourier series coefficients
     """
     def brg_load_y_component(thetas):
-        """
-        Cosine load distribution [Fig. 10, Ref. 4]
-        :param thetas: <np.array> angles
+        """ Cosine load distribution Fig. 10 [4]_
+
+        Parameters
+        ----------
+        thetas : ndarray
+            angles
         """
         new_array = np.zeros(len(thetas))
         for i, theta in enumerate(thetas):
@@ -95,7 +125,7 @@ def x_dir_beta_coefficients(N):
         return new_array
 
     # return all coefficients except the first one (Ao)
-    return fourier_series_coefficients(brg_load_y_component, 2 * np.pi, N, sample_rate=1000)[1:]
+    return fourier_series_coefficients(brg_load_y_component, 2 * np.pi, N, sample_rate=100000)[1:]
 
 
 ########################################################################
@@ -103,7 +133,7 @@ def x_dir_beta_coefficients(N):
 ########################################################################
 
 
-# alpha coefficients for N=45 [as chosen in Ref. 3] at sample_rate=100000
+# alpha coefficients for N=45 as chosen in [3]_ at sample_rate=100000
 # x_dir_alphas = x_dir_alpha_coefficients(45)
 x_dir_alphas = np.array([
     2.12206591e-01-4.77083644e-17j,  1.25000000e-01-5.89573465e-17j,
@@ -132,7 +162,7 @@ x_dir_alphas = np.array([
 ])
 
 
-# beta coefficients for N=45 [as chosen in Ref. 3] at sample_rate=100000
+# beta coefficients for N=45 as chosen in [3]_ at sample_rate=100000
 # x_dir_betas = x_dir_beta_coefficients(45)
 x_dir_betas = np.array([
     -1.94319243e-17-1.06103295e-01j, -5.45839291e-17-1.25000000e-01j,
