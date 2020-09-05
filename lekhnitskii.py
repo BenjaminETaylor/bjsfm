@@ -538,7 +538,7 @@ class LoadedHole(Hole):
 
         Returns
         -------
-        (1, N) ndarray
+        complex ndarray
             fourier series coefficients
         """
         N = self.FOURIER_TERMS
@@ -579,7 +579,7 @@ class LoadedHole(Hole):
 
         Returns
         -------
-        (1, N) ndarray
+        complex ndarray
             fourier series coefficients
         """
         N = self.FOURIER_TERMS
