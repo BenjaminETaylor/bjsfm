@@ -24,6 +24,78 @@ import numpy as np
 import fourier_series as fs
 
 
+def rotate_plane_stress(stresses, angle=0.):
+    r"""Rotates the stress components by given angle
+
+    The rotation angle is positive counter-clockwise from the positive x-axis in the cartesian xy-plane.
+
+    Parameters
+    ----------
+    stresses : ndarray
+        [:math: `\sigma_x, \sigma_y, \tau_{xy}`] in-plane stresses
+    angle : float
+        angle measured counter-clockwise from positive x-axis (radians)
+
+    Returns
+    -------
+    ndarray
+        [:math: `\sigma_x', \sigma_y', \tau_{xy}'`] rotated stresses
+
+    """
+    c = np.cos(angle)
+    s = np.sin(angle)
+    rotation_matrix = np.array([
+        [c**2, s**2, 2*s*c],
+        [s**2, c**2, -2*s*c],
+        [-s*c, s*c, c**2-s**2]
+    ])
+    return rotation_matrix.dot(stresses).flatten()
+
+
+def rotate_material_matrix(a_inv, angle=0.):
+    r"""Rotates the material compliance matrix by given angle
+
+    The rotation angle is positive counter-clockwise from the positive x-axis in the cartesian xy-plane.
+
+    Notes
+    -----
+    This function implements Eq. 9.6 [1]_
+
+    Parameters
+    ----------
+    a_inv : ndarray
+        (3, 3) inverse CLPT A-matrix
+    angle : float
+        angle measured counter-clockwise from positive x-axis (radians)
+
+    Returns
+    -------
+    ndarray
+        (3, 3) rotated compliance matrix
+
+    """
+    c = np.cos(angle)
+    s = np.sin(angle)
+
+    a11 = a_inv[0, 0]
+    a12 = a_inv[0, 1]
+    a16 = a_inv[0, 2]
+    a22 = a_inv[1, 1]
+    a26 = a_inv[1, 2]
+    a66 = a_inv[2, 2]
+
+    a11p = a11*c**4 + (2*a12 + a66)*s**2*c**2 + a22*s**4 + (a16*c**2 + a26*s**2)*np.sin(2*angle)
+    a22p = a11*s**4 + (2*a12 + a66)*s**2*c**2 + a22*c**4 - (a16*s**2 + a26*c**2)*np.sin(2*angle)
+    a12p = a12 + (a11 + a22 - 2*a12 - a66)*s**2*c**2 + 0.5*(a26 - a16)*np.sin(2*angle)*np.cos(2*angle)
+    a66p = a66 + 4*(a11 + a22 - 2*a12 - a66)*s**2*c**2 + 2*(a26 - a16)*np.sin(2*angle)*np.cos(2*angle)
+    a16p = ((a22*s**2 - a11*c**2 + 0.5*(2*a12 + a66)*np.cos(2*angle))*np.sin(2*angle)
+            + a16*c**2*(c**2 - 3*s**2) + a26*s**2*(3*c**2 - s**2))
+    a26p = ((a22*c**2 - a11*s**2 - 0.5*(2*a12 + a66)*np.cos(2*angle))*np.sin(2*angle)
+            + a16*s**2*(3*c**2 - s**2) + a26*c**2*(c**2 - 3*s**2))
+
+    return np.array([[a11p, a12p, a16p], [a12p, a22p, a26p], [a16p, a26p, a66p]])
+
+
 class Hole(abc.ABC):
     """Abstract parent class for defining a hole in an anisotropic infinite plate
 
@@ -47,15 +119,15 @@ class Hole(abc.ABC):
         hole diameter
     thickness : float
         laminate thickness
-    a_inv : (3, 3) array_like
-        inverse of CLPT A-matrix
+    a_inv : array_like
+        (3, 3) inverse of CLPT A-matrix
 
     Attributes
     ----------
     r : float
         the hole radius
-    a : (3, 3) ndarray
-        inverse a-matrix of the laminate
+    a : ndarray
+        (3, 3) inverse a-matrix of the laminate
     h : float
         thickness of the laminate
     mu1 : float
@@ -68,6 +140,8 @@ class Hole(abc.ABC):
         imaginary part of second root of characteristic equation
 
     """
+
+    MAPPING_PRECISION = 0.001
 
     def __init__(self, diameter, thickness, a_inv):
         self.r = diameter/2.
@@ -153,10 +227,10 @@ class Hole(abc.ABC):
         xi_1_pos = (z1 + np.sqrt(z1 * z1 - a * a - mu1 * mu1 * b * b)) / (a - 1j * mu1 * b)
         xi_1_neg = (z1 - np.sqrt(z1 * z1 - a * a - mu1 * mu1 * b * b)) / (a - 1j * mu1 * b)
 
-        if np.abs(xi_1_pos) >= 1.0:
+        if np.abs(xi_1_pos) >= (1. - self.MAPPING_PRECISION):
             xi_1 = xi_1_pos
             sign_1 = 1
-        elif np.abs(xi_1_neg) >= 1.0:
+        elif np.abs(xi_1_neg) >= (1. - self.MAPPING_PRECISION):
             xi_1 = xi_1_neg
             sign_1 = -1
         else:
@@ -200,10 +274,10 @@ class Hole(abc.ABC):
         xi_2_pos = (z2 + np.sqrt(z2 * z2 - a * a - mu2 * mu2 * b * b)) / (a - 1j * mu2 * b)
         xi_2_neg = (z2 - np.sqrt(z2 * z2 - a * a - mu2 * mu2 * b * b)) / (a - 1j * mu2 * b)
 
-        if np.abs(xi_2_pos) >= 1.0:
+        if np.abs(xi_2_pos) >= (1. - self.MAPPING_PRECISION):
             xi_2 = xi_2_pos
             sign_2 = 1
-        elif np.abs(xi_2_neg) >= 1.0:
+        elif np.abs(xi_2_neg) >= (1. - self.MAPPING_PRECISION):
             xi_2 = xi_2_neg
             sign_2 = -1
         else:
@@ -427,8 +501,8 @@ class UnloadedHole(Hole):
 
         Returns
         -------
-        [sx, sy, sxy] : (1, 3) ndarray
-            in-plane stress components in the cartesian coordinate system
+        [sx, sy, sxy] : ndarray
+            (1, 3) in-plane stress components in the cartesian coordinate system
 
 
         """
@@ -460,13 +534,30 @@ class LoadedHole(Hole):
         hole diameter
     thickness : float
         plate thickness
-    a_inv : (3, 3) array_like
-        inverse CLPT A-matrix
+    a_inv : array_like
+        (3, 3) inverse CLPT A-matrix
+    theta : float, optional
+        bearing angle counter clock-wise from positive x-axis (radians)
+
+    Attributes
+    ----------
+    p : float
+        bearing force
+    theta : float
+        bearing angle counter clock-wise from positive x-axis (radians)
+    A : float
+        real part of equilibrium constant for first stress function
+    A_bar : float
+        imaginary part of equilibrium constant for first stress function
+    B : float
+        real part of equilibrium constant for second stress function
+    B_bar : float
+        imaginary part of equilibrium constant for second stress function
 
     """
     FOURIER_TERMS = 45  # number of fourier series terms [3]_
 
-    # ALPHA_COEFFICIENTS = self._alpha_coefficients()
+    # X_DIR_COEFFICIENTS = self._x_dir_fourier_coefficients()
     X_DIR_COEFFICIENTS = np.array([
         2.12206591e-01 - 4.77083644e-17j, 1.25000000e-01 - 5.89573465e-17j,
         4.24413182e-02 - 1.91840853e-17j, -8.90314393e-18 - 1.79348322e-19j,
@@ -493,7 +584,7 @@ class LoadedHole(Hole):
         -7.00005248e-06 + 1.01720924e-19j
     ])
 
-    # BETA_COEFFICIENTS = self._beta_coefficients()
+    # Y_DIR_COEFFICIENTS = self._y_dir_fourier_coefficients()
     Y_DIR_COEFFICIENTS = np.array([
         -1.94319243e-17 - 1.06103295e-01j, -5.45839291e-17 - 1.25000000e-01j,
         -3.62876318e-17 - 6.36619772e-02j, 1.30591839e-18 + 1.52792630e-17j,
@@ -520,9 +611,11 @@ class LoadedHole(Hole):
         1.57354012e-18 + 1.57501181e-04j
     ])
 
-    def __init__(self, load, diameter, thickness, a_inv):
+    def __init__(self, load, diameter, thickness, a_inv, theta=0.):
+        a_inv = rotate_material_matrix(a_inv, angle=theta)
         super().__init__(diameter, thickness, a_inv)
         self.p = load
+        self.theta = theta
         self.A, self.A_bar, self.B, self.B_bar = self.equilibrium_constants()
 
     def _x_dir_fourier_coefficients(self, sample_rate=100000):
@@ -652,9 +745,8 @@ class LoadedHole(Hole):
     def equilibrium_constants(self):
         """Solve for constants of equilibrium
 
-        When the plate has loads applied that are not in equilibrium, the load is reacted at infinity
-        with an equal and opposite reaction. This function solves for the constant terms in the stress
-        function that account for this phenomena.
+        When the plate has loads applied that are not in equilibrium, the unbalanced loads are reacted at infinity.
+        This function solves for the constant terms in the stress functions that account for these reactions.
 
         Notes
         -----
@@ -763,8 +855,41 @@ class LoadedHole(Hole):
 
         return 1 / eta_2 * (B + np.sum(m * (betas - mu1 * alphas) / (mu1 - mu2) / xi_2 ** m))
 
+    def stress(self, x, y):
+        r""" Calculates the stress at point (x, y) in the plate
 
+       Parameters
+        ----------
+        x : float
+            cartesian x coordinate
+        y : float
+            cartesian y coordinate
 
+        Returns
+        -------
+        [sx, sy, sxy] : ndarray
+            (1, 3) in-plane stress components in the cartesian coordinate system
+
+        """
+        # rotate back to original coordinates
+        rotation = -self.theta
+
+        # convert points to polar coordinates
+        xy_vec = np.array([x, y])
+        r = np.linalg.norm(xy_vec)
+        angle = np.arccos(np.array([1, 0]).dot(xy_vec) / r)
+        angle = angle * np.sign(y) if y != 0 else angle
+
+        # rotate coordinates by negative theta
+        angle += rotation
+
+        # convert back to cartesian
+        x = r * np.cos(angle)
+        y = r * np.sin(angle)
+
+        # calculate stresses and rotate
+        stresses = super().stress(x, y)
+        return rotate_plane_stress(stresses, angle=rotation)
 
 
 
