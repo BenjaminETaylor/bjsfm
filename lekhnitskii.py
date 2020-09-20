@@ -32,14 +32,14 @@ def rotate_plane_stress(stresses, angle=0.):
     Parameters
     ----------
     stresses : ndarray
-        [:math: `\sigma_x, \sigma_y, \tau_{xy}`] in-plane stresses
-    angle : float
-        angle measured counter-clockwise from positive x-axis (radians)
+        2D array of [:math: `\sigma_x, \sigma_y, \tau_{xy}`] in-plane stresses
+    angle : float optional
+        angle measured counter-clockwise from positive x-axis (radians), defaults=0
 
     Returns
     -------
     ndarray
-        [:math: `\sigma_x', \sigma_y', \tau_{xy}'`] rotated stresses
+        2D array of [:math: `\sigma_x', \sigma_y', \tau_{xy}'`] rotated stresses
 
     """
     c = np.cos(angle)
@@ -49,7 +49,7 @@ def rotate_plane_stress(stresses, angle=0.):
         [s**2, c**2, -2*s*c],
         [-s*c, s*c, c**2-s**2]
     ])
-    return rotation_matrix.dot(stresses).flatten()
+    return np.array([rotation_matrix.dot(stresses[i]) for i in range(len(stresses))])
 
 
 def rotate_material_matrix(a_inv, angle=0.):
@@ -193,8 +193,8 @@ class Hole(abc.ABC):
 
         return mu1, mu2, mu1_bar, mu2_bar
 
-    def xi_1(self, z1):
-        r"""Calculates the first mapping parameter
+    def xi_1(self, z1s):
+        r"""Calculates the first mapping parameters
 
         Notes
         -----
@@ -204,44 +204,52 @@ class Hole(abc.ABC):
 
         Parameters
         ----------
-        z1 : complex
-            first parameter from the complex plane :math: `z_1=x+\mu_1y`
+        z1s : ndarray
+            1D array of first parameters from the complex plane :math: `z_1=x+\mu_1y`
 
         Returns
         -------
-        xi_1 : complex
-            the first mapping parameter
-        sign_1: int
-            sign producing positive mapping parameter
+        xi_1s : ndarray
+            1D array of the first mapping parameters
+        sign_1s : ndarray
+            1D array of signs producing positive mapping parameters
 
         Raises
         ------
         ValueError
-            if mapping parameter cannot be solved
+            if mapping parameters cannot be solved
 
         """
         mu1 = self.mu1
         a = self.r
         b = self.r
 
-        xi_1_pos = (z1 + np.sqrt(z1 * z1 - a * a - mu1 * mu1 * b * b)) / (a - 1j * mu1 * b)
-        xi_1_neg = (z1 - np.sqrt(z1 * z1 - a * a - mu1 * mu1 * b * b)) / (a - 1j * mu1 * b)
+        xi_1s = np.zeros(len(z1s), dtype=complex)
+        sign_1s = np.zeros(len(z1s), dtype=int)
 
-        if np.abs(xi_1_pos) >= (1. - self.MAPPING_PRECISION):
-            xi_1 = xi_1_pos
-            sign_1 = 1
-        elif np.abs(xi_1_neg) >= (1. - self.MAPPING_PRECISION):
-            xi_1 = xi_1_neg
-            sign_1 = -1
-        else:
+        xi_1_pos = (z1s + np.sqrt(z1s * z1s - a * a - mu1 * mu1 * b * b)) / (a - 1j * mu1 * b)
+        xi_1_neg = (z1s - np.sqrt(z1s * z1s - a * a - mu1 * mu1 * b * b)) / (a - 1j * mu1 * b)
+
+        pos_indices = np.where(np.abs(xi_1_pos) >= (1. - self.MAPPING_PRECISION))[0]
+        neg_indices = np.where(np.abs(xi_1_neg) >= (1. - self.MAPPING_PRECISION))[0]
+
+        xi_1s[pos_indices] = xi_1_pos[pos_indices]
+        xi_1s[neg_indices] = xi_1_neg[neg_indices]
+
+        # high level check that all indices were mapped
+        if not (pos_indices.size + neg_indices.size) == xi_1s.size:
+            bad_indices = np.where(xi_1s == 0)
             raise ValueError(
-                "xi_1 unsolvable:\n xi_1_pos={0}, xi_1_neg={1}".format(
-                    xi_1_pos, xi_1_neg))
+                "xi_1s unsolvable:\n xi_1_pos={0}, xi_1_neg={1}".format(
+                    xi_1_pos[bad_indices], xi_1_neg[bad_indices]))
 
-        return xi_1, sign_1
+        sign_1s[pos_indices] = 1
+        sign_1s[neg_indices] = -1
 
-    def xi_2(self, z2):
-        r""" Calculates the first mapping parameter
+        return xi_1s, sign_1s
+
+    def xi_2(self, z2s):
+        r""" Calculates the first mapping parameters
 
         Notes
         -----
@@ -251,41 +259,49 @@ class Hole(abc.ABC):
 
         Parameters
         ----------
-        z2 : complex
-            second parameter from the complex plane :math: `z_2=x+\mu_2y`
+        z2s : ndarray
+            1D array of first parameters from the complex plane :math: `z_1=x+\mu_1y`
 
         Returns
         -------
-        xi_2 : complex
-            the second mapping parameter
-        sign_2: int
-            sign producing positive mapping parameter
+        xi_2s : ndarray
+            1D array of the first mapping parameters
+        sign_2s : ndarray
+            1D array of signs producing positive mapping parameters
 
         Raises
         ------
         ValueError
-            if mapping parameter cannot be solved
+            if mapping parameters cannot be solved
 
         """
         mu2 = self.mu2
         a = self.r
         b = self.r
 
-        xi_2_pos = (z2 + np.sqrt(z2 * z2 - a * a - mu2 * mu2 * b * b)) / (a - 1j * mu2 * b)
-        xi_2_neg = (z2 - np.sqrt(z2 * z2 - a * a - mu2 * mu2 * b * b)) / (a - 1j * mu2 * b)
+        xi_2s = np.zeros(len(z2s), dtype=complex)
+        sign_2s = np.zeros(len(z2s), dtype=int)
 
-        if np.abs(xi_2_pos) >= (1. - self.MAPPING_PRECISION):
-            xi_2 = xi_2_pos
-            sign_2 = 1
-        elif np.abs(xi_2_neg) >= (1. - self.MAPPING_PRECISION):
-            xi_2 = xi_2_neg
-            sign_2 = -1
-        else:
+        xi_2_pos = (z2s + np.sqrt(z2s * z2s - a * a - mu2 * mu2 * b * b)) / (a - 1j * mu2 * b)
+        xi_2_neg = (z2s - np.sqrt(z2s * z2s - a * a - mu2 * mu2 * b * b)) / (a - 1j * mu2 * b)
+
+        pos_indices = np.where(np.abs(xi_2_pos) >= (1. - self.MAPPING_PRECISION))[0]
+        neg_indices = np.where(np.abs(xi_2_neg) >= (1. - self.MAPPING_PRECISION))[0]
+
+        xi_2s[pos_indices] = xi_2_pos[pos_indices]
+        xi_2s[neg_indices] = xi_2_neg[neg_indices]
+
+        # high level check that all indices were mapped
+        if not (pos_indices.size + neg_indices.size) == xi_2s.size:
+            bad_indices = np.where(xi_2s == 0)
             raise ValueError(
                 "xi_2 unsolvable:\n xi_2_pos={0}, xi_2_neg={1}".format(
-                    xi_2_pos, xi_2_neg))
+                    xi_2_pos[bad_indices], xi_2_neg[bad_indices]))
 
-        return xi_2, sign_2
+        sign_2s[pos_indices] = 1
+        sign_2s[neg_indices] = -1
+
+        return xi_2s, sign_2s
 
     @abc.abstractmethod
     def phi_1_prime(self, z1):
@@ -295,8 +311,8 @@ class Hole(abc.ABC):
     def phi_2_prime(self, z2):
         raise NotImplementedError("You must implement this function.")
 
-    def stress(self, x, y):
-        r""" Calculates the stress at point (x, y) in the plate
+    def stress(self, points):
+        r""" Calculates the stress at (x, y) points in the plate
 
         Notes
         -----
@@ -308,19 +324,23 @@ class Hole(abc.ABC):
 
         Parameters
         ----------
-        x : float
-            cartesian x coordinate
-        y : float
-            cartesian y coordinate
+        points : array_like
+            [[x0, y0], [x1, y1], ... , [xn, yn]]
+            (n, 2) x, y locations in the cartesian coordinate system
 
         Returns
         -------
-        [sx, sy, sxy] : (1, 3) ndarray
-            in-plane stress components in the cartesian coordinate system
+        ndarray
+            [[sx0, sy0, sxy0], [sx1, sy1, sxy1], ... , [sxn, syn, sxyn]]
+            (n, 3) in-plane stress components in the cartesian coordinate system
 
         """
         mu1 = self.mu1
         mu2 = self.mu2
+        pnts = np.array(points)
+
+        x = pnts[:, 0]
+        y = pnts[:, 1]
 
         z1 = x + mu1 * y
         z2 = x + mu2 * y
@@ -332,7 +352,7 @@ class Hole(abc.ABC):
         sy = 2.0 * np.real(phi_1_prime + phi_2_prime)
         sxy = -2.0 * np.real(mu1 * phi_1_prime + mu2 * phi_2_prime)
 
-        return np.array([sx, sy, sxy])
+        return np.array([sx, sy, sxy]).T
 
 
 class UnloadedHole(Hole):
@@ -481,38 +501,29 @@ class UnloadedHole(Hole):
 
         return -C2 / (xi_2 ** 2) * (1 + z2 / eta2) * kappa2
 
-    def stress(self, x, y):
-        r""" Calculates the stress at point (x, y) in the plate
-
-        Notes
-        -----
-        This method implements Eq. A.9 [1]_
-
-        .. math:: \sigma_x=2Re[\mu_1^2\Phi_1'(z_1)+\mu_2^2\Phi_2'(z_2)]+\sigma_x^*
-        .. math:: \sigma_y=2Re[\Phi_1'(z_1)+\Phi_2'(z_2)]+\sigma_y^*
-        .. math:: \tau_xy=-2Re[\mu_1\Phi_1'(z_1)+\mu_2\Phi_2'(z_2)]+\tau_{xy}^*
+    def stress(self, points):
+        r""" Calculates the stress at (x, y) points in the plate
 
         Parameters
         ----------
-        x : float
-            cartesian x coordinate
-        y : float
-            cartesian y coordinate
+        points : array_like
+            [[x0, y0], [x1, y1], ... , [xn, yn]]
+            (n, 2) x, y locations in the cartesian coordinate system
 
         Returns
         -------
-        [sx, sy, sxy] : ndarray
-            (1, 3) in-plane stress components in the cartesian coordinate system
-
+        ndarray
+            [[sx0, sy0, sxy0], [sx1, sy1, sxy1], ... , [sxn, syn, sxyn]]
+            (n, 3) in-plane stress components in the cartesian coordinate system
 
         """
-        sx, sy, sxy = super().stress(x, y)
+        sx, sy, sxy = super().stress(points).T
 
         sx_app = self.applied_stress[0]
         sy_app = self.applied_stress[1]
         sxy_app = self.applied_stress[2]
 
-        return np.array([sx + sx_app, sy + sy_app, sxy + sxy_app])
+        return np.array([sx + sx_app, sy + sy_app, sxy + sxy_app]).T
 
 
 class LoadedHole(Hole):
@@ -773,10 +784,10 @@ class LoadedHole(Hole):
                            [2*R1*R2, (R1**2 - R2**2), 2*R3*R4, (R3**2 - R4**2)],
                            [R2/(R1**2 + R2**2), -R1/(R1**2 + R2**2), R4/(R3**2 + R4**2), -R3/(R3**2 + R4**2)]])
 
-        load_vec = p/(4.*pi*h) * np.array([[0.],
-                                           [1.],
-                                           [a16/a11],
-                                           [a12/a22]])
+        load_vec = p/(4.*pi*h) * np.array([0.,
+                                           1.,
+                                           a16/a11,
+                                           a12/a22])
 
         A1, A2, B1, B2 = np.dot(np.linalg.inv(mu_mat), load_vec)
         return A1, A2, B1, B2
@@ -816,7 +827,8 @@ class LoadedHole(Hole):
         alphas = self.alphas()
         betas = self.betas()
 
-        return 1 / eta_1 * (A - np.sum(m * (betas - mu2 * alphas) / (mu1 - mu2) / xi_1 ** m))
+        return np.array([1 / eta_1[i] * (A - np.sum(m * (betas - mu2 * alphas) / (mu1 - mu2) / xi_1[i] ** m))
+                        for i in range(len(xi_1))])
 
     def phi_2_prime(self, z2):
         r"""Calculates derivative of the first stress function
@@ -853,42 +865,46 @@ class LoadedHole(Hole):
         alphas = self.alphas()
         betas = self.betas()
 
-        return 1 / eta_2 * (B + np.sum(m * (betas - mu1 * alphas) / (mu1 - mu2) / xi_2 ** m))
+        return np.array([1 / eta_2[i] * (B + np.sum(m * (betas - mu1 * alphas) / (mu1 - mu2) / xi_2[i] ** m))
+                         for i in range(len(xi_2))])
 
-    def stress(self, x, y):
-        r""" Calculates the stress at point (x, y) in the plate
+    def stress(self, points):
+        r""" Calculates the stress at (x, y) points in the plate
 
-       Parameters
+        Parameters
         ----------
-        x : float
-            cartesian x coordinate
-        y : float
-            cartesian y coordinate
+        points : array_like
+            [[x0, y0], [x1, y1], ... , [xn, yn]]
+            (n, 2) x, y locations in the cartesian coordinate system
 
         Returns
         -------
-        [sx, sy, sxy] : ndarray
-            (1, 3) in-plane stress components in the cartesian coordinate system
+        ndarray
+            [[sx0, sy0, sxy0], [sx1, sy1, sxy1], ... , [sxn, syn, sxyn]]
+            (n, 3) in-plane stress components in the cartesian coordinate system
 
         """
-        # rotate back to original coordinates
+        # rotation back to original coordinates
         rotation = -self.theta
 
         # convert points to polar coordinates
-        xy_vec = np.array([x, y])
-        r = np.linalg.norm(xy_vec)
-        angle = np.arccos(np.array([1, 0]).dot(xy_vec) / r)
-        angle = angle * np.sign(y) if y != 0 else angle
+        xy = np.array(points)
+        r = np.linalg.norm(xy, axis=1)
+        # calculate angles and fix signs
+        angles = np.arccos(np.array([1, 0]).dot(xy.T) / r)
+        ys = xy[:, 1]
+        where_vals = np.nonzero(ys)[0]
+        angles[where_vals] = angles[where_vals] * np.sign(ys[where_vals])
 
         # rotate coordinates by negative theta
-        angle += rotation
+        angles += rotation
 
         # convert back to cartesian
-        x = r * np.cos(angle)
-        y = r * np.sin(angle)
+        xy[:, 0] = r * np.cos(angles)
+        xy[:, 1] = r * np.sin(angles)
 
         # calculate stresses and rotate
-        stresses = super().stress(x, y)
+        stresses = super().stress(xy)
         return rotate_plane_stress(stresses, angle=rotation)
 
 

@@ -11,22 +11,23 @@ class LoadedHoleTests(unittest.TestCase):
     SXY_DELTA = 0.01
 
     def _test_at_points(self, python_func, fortran_stresses):
+        python_stresses = python_func.stress(self.TEST_POINTS)
         for i, pnt in enumerate(self.TEST_POINTS):
             # compare x-dir stress
             self.assertAlmostEqual(
-                python_func.stress(pnt[0], pnt[1])[0],
+                python_stresses[i][0],
                 fortran_stresses[0][0][i],
                 delta=self.SX_DELTA
             )
             # compare y-dir stress
             self.assertAlmostEqual(
-                python_func.stress(pnt[0], pnt[1])[1],
+                python_stresses[i][1],
                 fortran_stresses[1][0][i],
                 delta=self.SY_DELTA
             )
             # compare shear stress
             self.assertAlmostEqual(
-                python_func.stress(pnt[0], pnt[1])[2],
+                python_stresses[i][2],
                 fortran_stresses[2][0][i],
                 delta=self.SXY_DELTA
             )
@@ -50,7 +51,7 @@ class LoadedHoleTests(unittest.TestCase):
         d = 0.25
         h = 0.058
         p = 100.
-        alpha = 345.
+        alpha = 60.
         p_stress = LoadedHole(p, d, h, a_inv, theta=np.deg2rad(alpha))
         f_stress, f_u, f_v = f_code.loaded(4*p/h, d, a_inv, alpha, 0, len(self.TEST_POINTS))
         self._test_at_points(p_stress, f_stress)
