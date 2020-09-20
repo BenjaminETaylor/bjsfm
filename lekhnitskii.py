@@ -363,14 +363,14 @@ class UnloadedHole(Hole):
 
     Parameters
     ----------
-    loads: (1, 3) array_like
-        [Nx, Ny, Nxy] force / unit length
+    loads: array_like
+        1D array [Nx, Ny, Nxy] force / unit length
     diameter: float
         hole diameter
     thickness: float
         laminate thickness
-    a_inv: (3, 3) array_like
-        inverse CLPT A-matrix
+    a_inv: array_like
+        2D array (3, 3) inverse CLPT A-matrix
 
     Attributes
     ----------
@@ -546,7 +546,7 @@ class LoadedHole(Hole):
     thickness : float
         plate thickness
     a_inv : array_like
-        (3, 3) inverse CLPT A-matrix
+        2D array (3, 3) inverse CLPT A-matrix
     theta : float, optional
         bearing angle counter clock-wise from positive x-axis (radians)
 
