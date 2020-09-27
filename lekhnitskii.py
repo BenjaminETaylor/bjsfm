@@ -21,6 +21,7 @@ References
 """
 import abc
 import numpy as np
+import numpy.testing as npt
 import fourier_series as fs
 
 
@@ -64,14 +65,14 @@ def rotate_material_matrix(a_inv, angle=0.):
     Parameters
     ----------
     a_inv : ndarray
-        (3, 3) inverse CLPT A-matrix
+        2D (3, 3) inverse CLPT A-matrix
     angle : float
         angle measured counter-clockwise from positive x-axis (radians)
 
     Returns
     -------
     ndarray
-        (3, 3) rotated compliance matrix
+        2D (3, 3) rotated compliance matrix
 
     """
     c = np.cos(angle)
@@ -93,7 +94,44 @@ def rotate_material_matrix(a_inv, angle=0.):
     a26p = ((a22*c**2 - a11*s**2 - 0.5*(2*a12 + a66)*np.cos(2*angle))*np.sin(2*angle)
             + a16*s**2*(3*c**2 - s**2) + a26*c**2*(c**2 - 3*s**2))
 
+    # test invariants (Eq. 9.7 [2]_)
+    npt.assert_almost_equal(a11p + a22p + 2*a12p, a11 + a22 + 2*a12, decimal=4)
+    npt.assert_almost_equal(a66p - 4*a12p, a66 - 4*a12, decimal=4)
+
     return np.array([[a11p, a12p, a16p], [a12p, a22p, a26p], [a16p, a26p, a66p]])
+
+
+def rotate_complex_parameters(mu1, mu2, angle=0.):
+    r"""Rotates the complex parameters by given angle
+
+    The rotation angle is positive counter-clockwise from the positive x-axis in the cartesian xy-plane.
+
+    Notes
+    -----
+    Implements Eq. 10.8 [2]_
+
+    Parameters
+    ----------
+    mu1 : complex
+        first complex parameter
+    mu2 : complex
+        second complex parameter
+    angle : float optional
+        angle measured counter-clockwise from positive x-axis (radians), defaults=0
+
+    Returns
+    -------
+    mu1p, mu2p : complex
+        first and second transformed complex parameters
+
+    """
+    c = np.cos(angle)
+    s = np.sin(angle)
+
+    mu1p = (mu1*c - s)/(c + mu1*s)
+    mu2p = (mu2*c - s)/(c + mu2*s)
+
+    return mu1p, mu2p
 
 
 class Hole(abc.ABC):
@@ -141,7 +179,7 @@ class Hole(abc.ABC):
 
     """
 
-    MAPPING_PRECISION = 0.001
+    MAPPING_PRECISION = 0.0000001
 
     def __init__(self, diameter, thickness, a_inv):
         self.r = diameter/2.
@@ -174,20 +212,20 @@ class Hole(abc.ABC):
         roots = np.roots([a11, -2 * a16, (2 * a12 + a66), -2 * a26, a22])
 
         if np.imag(roots[0]) >= 0.0:
-            mu1 = roots[0]
-            mu1_bar = roots[1]
+            mu2 = roots[0]
+            mu2_bar = roots[1]
         elif np.imag(roots[1]) >= 0.0:
-            mu1 = roots[1]
-            mu1_bar = roots[0]
+            mu2 = roots[1]
+            mu2_bar = roots[0]
         else:
             raise ValueError("mu1 cannot be solved")
 
         if np.imag(roots[2]) >= 0.0:
-            mu2 = roots[2]
-            mu2_bar = roots[3]
+            mu1 = roots[2]
+            mu1_bar = roots[3]
         elif np.imag(roots[3]) >= 0.0:
-            mu2 = roots[3]
-            mu2_bar = roots[2]
+            mu1 = roots[3]
+            mu1_bar = roots[2]
         else:
             raise ValueError("mu2 cannot be solved")
 
@@ -311,7 +349,7 @@ class Hole(abc.ABC):
     def phi_2_prime(self, z2):
         raise NotImplementedError("You must implement this function.")
 
-    def stress(self, points):
+    def stress(self, x, y):
         r""" Calculates the stress at (x, y) points in the plate
 
         Notes
@@ -324,9 +362,10 @@ class Hole(abc.ABC):
 
         Parameters
         ----------
-        points : array_like
-            [[x0, y0], [x1, y1], ... , [xn, yn]]
-            (n, 2) x, y locations in the cartesian coordinate system
+        x : array_like
+            1D array x locations in the cartesian coordinate system
+        y : array_like
+            1D array y locations in the cartesian coordinate system
 
         Returns
         -------
@@ -337,10 +376,9 @@ class Hole(abc.ABC):
         """
         mu1 = self.mu1
         mu2 = self.mu2
-        pnts = np.array(points)
 
-        x = pnts[:, 0]
-        y = pnts[:, 1]
+        x = np.array(x)
+        y = np.array(y)
 
         z1 = x + mu1 * y
         z2 = x + mu2 * y
@@ -501,14 +539,15 @@ class UnloadedHole(Hole):
 
         return -C2 / (xi_2 ** 2) * (1 + z2 / eta2) * kappa2
 
-    def stress(self, points):
+    def stress(self, x, y):
         r""" Calculates the stress at (x, y) points in the plate
 
         Parameters
         ----------
-        points : array_like
-            [[x0, y0], [x1, y1], ... , [xn, yn]]
-            (n, 2) x, y locations in the cartesian coordinate system
+        x : array_like
+            1D array x locations in the cartesian coordinate system
+        y : array_like
+            1D array y locations in the cartesian coordinate system
 
         Returns
         -------
@@ -517,7 +556,7 @@ class UnloadedHole(Hole):
             (n, 3) in-plane stress components in the cartesian coordinate system
 
         """
-        sx, sy, sxy = super().stress(points).T
+        sx, sy, sxy = super().stress(x, y).T
 
         sx_app = self.applied_stress[0]
         sy_app = self.applied_stress[1]
@@ -868,14 +907,15 @@ class LoadedHole(Hole):
         return np.array([1 / eta_2[i] * (B + np.sum(m * (betas - mu1 * alphas) / (mu1 - mu2) / xi_2[i] ** m))
                          for i in range(len(xi_2))])
 
-    def stress(self, points):
+    def stress(self, x, y):
         r""" Calculates the stress at (x, y) points in the plate
 
         Parameters
         ----------
-        points : array_like
-            [[x0, y0], [x1, y1], ... , [xn, yn]]
-            (n, 2) x, y locations in the cartesian coordinate system
+        x : array_like
+            1D array x locations in the cartesian coordinate system
+        y : array_like
+            1D array y locations in the cartesian coordinate system
 
         Returns
         -------
@@ -888,23 +928,24 @@ class LoadedHole(Hole):
         rotation = -self.theta
 
         # convert points to polar coordinates
-        xy = np.array(points)
-        r = np.linalg.norm(xy, axis=1)
+        x = np.array(x)
+        y = np.array(y)
+        r = np.sqrt(x**2 + y**2)
         # calculate angles and fix signs
+        xy = np.array([x, y]).T
         angles = np.arccos(np.array([1, 0]).dot(xy.T) / r)
-        ys = xy[:, 1]
-        where_vals = np.nonzero(ys)[0]
-        angles[where_vals] = angles[where_vals] * np.sign(ys[where_vals])
+        where_vals = np.nonzero(y)[0]
+        angles[where_vals] = angles[where_vals] * np.sign(y[where_vals])
 
         # rotate coordinates by negative theta
         angles += rotation
 
         # convert back to cartesian
-        xy[:, 0] = r * np.cos(angles)
-        xy[:, 1] = r * np.sin(angles)
+        x = r * np.cos(angles)
+        y = r * np.sin(angles)
 
         # calculate stresses and rotate
-        stresses = super().stress(xy)
+        stresses = super().stress(x, y)
         return rotate_plane_stress(stresses, angle=rotation)
 
 
