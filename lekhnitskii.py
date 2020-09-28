@@ -19,10 +19,14 @@ References
    fastened joints in advanced composite materials* (Vol. II). AFML-TR-73-145.
 
 """
+import logging
 import abc
 import numpy as np
 import numpy.testing as npt
 import fourier_series as fs
+
+
+logger = logging.getLogger(__name__)
 
 
 def rotate_plane_stress(stresses, angle=0.):
@@ -252,11 +256,6 @@ class Hole(abc.ABC):
         sign_1s : ndarray
             1D array of signs producing positive mapping parameters
 
-        Raises
-        ------
-        ValueError
-            if mapping parameters cannot be solved
-
         """
         mu1 = self.mu1
         a = self.r
@@ -276,10 +275,8 @@ class Hole(abc.ABC):
 
         # high level check that all indices were mapped
         if not (pos_indices.size + neg_indices.size) == xi_1s.size:
-            bad_indices = np.where(xi_1s == 0)
-            raise ValueError(
-                "xi_1s unsolvable:\n xi_1_pos={0}, xi_1_neg={1}".format(
-                    xi_1_pos[bad_indices], xi_1_neg[bad_indices]))
+            bad_indices = np.where(xi_1s == 0)[0]
+            logger.warning(f"xi_1 unsolvable\n Failed Indices: {bad_indices}")
 
         sign_1s[pos_indices] = 1
         sign_1s[neg_indices] = -1
@@ -307,11 +304,6 @@ class Hole(abc.ABC):
         sign_2s : ndarray
             1D array of signs producing positive mapping parameters
 
-        Raises
-        ------
-        ValueError
-            if mapping parameters cannot be solved
-
         """
         mu2 = self.mu2
         a = self.r
@@ -331,10 +323,8 @@ class Hole(abc.ABC):
 
         # high level check that all indices were mapped
         if not (pos_indices.size + neg_indices.size) == xi_2s.size:
-            bad_indices = np.where(xi_2s == 0)
-            raise ValueError(
-                "xi_2 unsolvable:\n xi_2_pos={0}, xi_2_neg={1}".format(
-                    xi_2_pos[bad_indices], xi_2_neg[bad_indices]))
+            bad_indices = np.where(xi_2s == 0)[0]
+            logger.warning(f"xi_2 unsolvable\n Failed Indices: {bad_indices}")
 
         sign_2s[pos_indices] = 1
         sign_2s[neg_indices] = -1
@@ -481,12 +471,13 @@ class UnloadedHole(Hole):
 
         Parameters
         ----------
-        z1 : complex
-            first mapping parameter
+        z1 : ndarray
+            1D complex array first mapping parameter
 
         Returns
         -------
-        complex
+        ndarray
+            1D complex array
 
         """
         a = self.r
@@ -517,12 +508,13 @@ class UnloadedHole(Hole):
 
         Parameters
         ----------
-        z2 : complex
-            second mapping parameter
+        z2 : ndarray
+            1D complex array second mapping parameter
 
         Returns
         -------
-        complex
+        ndarray
+            1D complex array
 
         """
         a = self.r
@@ -844,12 +836,13 @@ class LoadedHole(Hole):
 
         Parameters
         ----------
-        z1 : complex
-            first mapping parameter
+        z1 : ndarray
+            1D complex array first mapping parameter
 
         Returns
         -------
-        complex
+        ndarray
+            1D complex array
 
         """
         mu1 = self.mu1
@@ -882,12 +875,13 @@ class LoadedHole(Hole):
 
         Parameters
         ----------
-        z2 : complex
-            second mapping parameter
+        z2 : ndarray
+            1D complex array second mapping parameter
 
         Returns
         -------
-        complex
+        ndarray
+            1D complex array
 
         """
         mu1 = self.mu1
@@ -932,8 +926,7 @@ class LoadedHole(Hole):
         y = np.array(y)
         r = np.sqrt(x**2 + y**2)
         # calculate angles and fix signs
-        xy = np.array([x, y]).T
-        angles = np.arccos(np.array([1, 0]).dot(xy.T) / r)
+        angles = np.arccos(np.array([1, 0]).dot(np.array([x, y])) / r)
         where_vals = np.nonzero(y)[0]
         angles[where_vals] = angles[where_vals] * np.sign(y[where_vals])
 

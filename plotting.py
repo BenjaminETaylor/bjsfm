@@ -2,38 +2,44 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_stress(stress_obj, component=0, refinement=100, xbounds=None, ybounds=None):
-    """ Plots the x-direction stresses
+def plot_stress(lekhnitskii_obj, comp=0, xnum=100, ynum=100, xbounds=None, ybounds=None):
+    """ Plots the stresses
 
     Parameters
     ----------
-    stress_obj
-    component
-    refinement
-    xbounds
-    ybounds
-
-    Returns
-    -------
+    lekhnitskii_obj : :obj: lekhnitskii.UnloadedHole or :obj: lekhnitskii.LoadedHole
+        LoadedHole or UnloadedHole instance
+    comp : {0, 1, 2}, optional
+        stress component, default=0
+    xnum : int, optional
+        number of points to plot along x-axis, default=100
+    ynum : int, optional
+        number of points to plot along y-axis, default=100
+    xbounds : tuple of int, optional
+        (x0, x1) x-axis bounds
+    ybounds : tuple of int, optional
+        (y0, y1) y-axis bounds
 
     """
-    radius = stress_obj.r
+    radius = lekhnitskii_obj.r
 
     # set bounds
     if xbounds:
-        x = np.linspace(xbounds[0], xbounds[1], endpoint=True, num=refinement)
+        x = np.linspace(xbounds[0], xbounds[1], endpoint=True, num=xnum)
     else:
-        x = np.linspace(-6*radius, 6*radius, endpoint=True, num=refinement)
+        x = np.linspace(-6*radius, 6*radius, endpoint=True, num=xnum)
     if ybounds:
-        y = np.linspace(ybounds[0], ybounds[1], endpoint=True, num=refinement)
+        y = np.linspace(ybounds[0], ybounds[1], endpoint=True, num=ynum)
     else:
-        y = np.linspace(-6*radius, 6*radius, endpoint=True, num=refinement)
+        y = np.linspace(-6*radius, 6*radius, endpoint=True, num=ynum)
 
     # remove points inside hole
     X, Y = np.meshgrid(x, y)
 
     # get stresses
-    stress = stress_obj.stress(X.flatten(), Y.flatten())[:, component]
+    # mX = np.ma.masked_inside(X, -radius, radius)
+    # mY = np.ma.masked_inside(Y, -radius, radius)
+    stress = lekhnitskii_obj.stress(X.flatten(), Y.flatten())[:, comp]
     stress.shape = (len(x), len(y))
 
     fig, ax = plt.subplots()
