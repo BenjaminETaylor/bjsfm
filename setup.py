@@ -30,7 +30,10 @@ setup(
     packages=["bjsfm"],
     # packages=find_packages(exclude=("tests",)),
     # include_package_data=True,
-    install_requires=["numpy", "matplotlib"],
+    install_requires=[
+        "numpy",
+        "matplotlib",
+    ],
     python_requires='~=3.6',
     # entry_points={
     #     "console_scripts": [
