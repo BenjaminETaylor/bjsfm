@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 
 
 def plot_stress(lekhnitskii_obj, comp=0, xnum=100, ynum=100, xbounds=None, ybounds=None):
-    """ Plots the stresses
+    """ Plots stresses
 
     Parameters
     ----------
@@ -43,9 +43,13 @@ def plot_stress(lekhnitskii_obj, comp=0, xnum=100, ynum=100, xbounds=None, yboun
     stress.shape = (len(x), len(y))
 
     fig, ax = plt.subplots()
+    ax.set_aspect('equal')
     cp = plt.contourf(X, Y, stress, corner_mask=True)
     plt.colorbar(cp)
+    plt.title(f'Python bjsfm Stress:\n {comp} dir stress')
     plt.show()
+
+
 
 
 
