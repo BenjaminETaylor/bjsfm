@@ -7,14 +7,14 @@ airframe structures. This project ports the original fortran code to pure python
     a_inv = [[0.1, 0.05, 0.], [0.05, 0.1, 0.], [0., 0., 0.5]]  # inverse a-matrix from CLPT
     loads = [100, 100, 50]  # force / unit length
     plate = UnloadedHole(diameter=0.25, thickness=0.1, a_inv=a_inv, loads=loads)
-    plate.stress(x=0.125, y=0.)
+    plate.stress(x=[0.125], y=[0.])
 ```
 
 ## Features
 
-- Lekhnitskii's anisotropic elasticity solutions for loaded (cosine distribution) and unloaded holes
-- Combined bearing and bypass 2D infinite plate stress distribution
-- Optional DeJong tension (or compression) bearing correction
+- [X] Lekhnitskii's anisotropic elasticity solutions for loaded (cosine distribution) and unloaded holes
+- [ ] Combined bearing and bypass 2D infinite plate stress distribution
+- [ ] Optional DeJong tension (or compression) bearing correction
 
 ## Installation
 

@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from lekhnitskii import UnloadedHole, LoadedHole, rotate_material_matrix
+from bjsfm.lekhnitskii import UnloadedHole, LoadedHole
 from tests.fortran import lekhnitskii_f as bjsfm
 
 

@@ -23,7 +23,7 @@ import logging
 import abc
 import numpy as np
 import numpy.testing as npt
-import fourier_series as fs
+import bjsfm.fourier_series as fs
 
 
 logger = logging.getLogger(__name__)
@@ -162,7 +162,7 @@ class Hole(abc.ABC):
     thickness : float
         laminate thickness
     a_inv : array_like
-        (3, 3) inverse of CLPT A-matrix
+        2D (3, 3) inverse of CLPT A-matrix
 
     Attributes
     ----------
