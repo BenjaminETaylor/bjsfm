@@ -349,7 +349,7 @@ class LoadedHoleTests(HoleTests):
         f_stress, f_u, f_v = bjsfm.loaded(4*p/h, d, a_inv, alpha, step, len(X_POINTS)//2)
         self._test_at_points(p_stress, f_stress, step=step)
 
-    # The below tests fail because fortran code seems to be incorrect
+    # # The below tests fail because fortran code seems to be incorrect
     # def test_soft_at_45_degrees(self):
     #     a_inv = HARD
     #     h = HARD_THICK
