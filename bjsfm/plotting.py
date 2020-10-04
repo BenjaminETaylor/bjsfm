@@ -2,8 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_stress(lekhnitskii_obj, comp=0, rnum=100, tnum=100, xbounds=None, ybounds=None):
+def plot_stress(lekhnitskii_obj, comp=0, rnum=100, tnum=100, xbounds=None, ybounds=None, cmap='seismic'):
     """ Plots stresses
+
+    Notes
+    -----
+    colormap options can be found at
+        https://matplotlib.org/3.1.1/tutorials/colors/colormaps.html
 
     Parameters
     ----------
@@ -19,6 +24,8 @@ def plot_stress(lekhnitskii_obj, comp=0, rnum=100, tnum=100, xbounds=None, yboun
         (x0, x1) x-axis bounds, default=6*radius
     ybounds : tuple of int, optional
         (y0, y1) y-axis bounds default=6*radius
+    cmap : {'coolwarm', 'bwr', 'seismic', ...}, optional
+        any colormap name from matplotlib.pyplot
 
     """
     radius = lekhnitskii_obj.r
@@ -37,11 +44,11 @@ def plot_stress(lekhnitskii_obj, comp=0, rnum=100, tnum=100, xbounds=None, yboun
     x.shape = y.shape = (tnum, rnum)
 
     stress = lekhnitskii_obj.stress(x.flatten(), y.flatten())[:, comp]
-    stress.shape = (len(x), len(y))
+    stress.shape = (tnum, rnum)
 
     fig, ax = plt.subplots()
     ax.set_aspect('equal')
-    cp = plt.contourf(x, y, stress, corner_mask=True)
+    cp = plt.contourf(x, y, stress, corner_mask=True, cmap=plt.get_cmap(cmap))
     plt.colorbar(cp)
     plt.xlim(xbounds[0], xbounds[1])
     plt.ylim(ybounds[0], ybounds[1])
