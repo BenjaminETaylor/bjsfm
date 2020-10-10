@@ -8,7 +8,8 @@ airframe structures. This project ports the original fortran code to pure python
     a_inv = [[0.1, 0.05, 0.], [0.05, 0.1, 0.], [0., 0., 0.5]]  # inverse a-matrix from CLPT
     loads = [100, 100, 50]  # force / unit length
     plate = UnloadedHole(diameter=0.25, thickness=0.1, a_inv=a_inv, loads=loads)
-    plate.stress(x=[0.125], y=[0.])
+    # get stresses at four points around hole
+    plate.stress(x=[0.125, 0., -0.125, 0.], y=[0., 0.125, 0., -0.125])
 ```
 
 ## Features
