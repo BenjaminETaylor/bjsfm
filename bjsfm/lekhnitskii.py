@@ -465,9 +465,9 @@ class UnloadedHole(Hole):
         This method implements Eq. A.8 [1]_
 
         .. math:: C_1=\frac{\beta_1-\mu_2\alpha_1}{\mu_1-\mu_2}
-        .. math:: \eta_1=\pm\sqrt{z_1^2-a^2-\mu_1^2b^2}
+        .. math:: \eta_1=\frac{z_1\pm\sqrt{z_1^2-a^2-\mu_1^2b^2}}{a-i\mu_1b}
         .. math:: \kappa_1=\frac{1}{a-i\mu_1b}
-        .. math:: \Phi_1'=-\frac{C_1}{\xi_1^2}(1+\frac{z_1}{\eta_1}\kappa_1
+        .. math:: \Phi_1'=-\frac{C_1}{\xi_1^2}(1+\frac{z_1}{\eta_1})\kappa_1
 
         Parameters
         ----------
@@ -502,9 +502,9 @@ class UnloadedHole(Hole):
         This method implements Eq. A.8 [1]_
 
         .. math:: C_2=-\frac{\beta_1-\mu_1\alpha_1}{\mu_1-\mu_2}
-        .. math:: \eta_2=\pm\sqrt{z_2^2-a^2-\mu_2^2b^2}
+        .. math:: \eta_2=\frac{z_2\pm\sqrt{z_2^2-a^2-\mu_2^2b^2}}{a-i\mu_2b}
         .. math:: \kappa_2=\frac{1}{a-i\mu_2b}
-        .. math:: \Phi_2'=-\frac{C_2}{\xi_2^2}(1+\frac{z_2}{\eta_2}\kappa_2
+        .. math:: \Phi_2'=-\frac{C_2}{\xi_2^2}(1+\frac{z_2}{\eta_2})\kappa_2
 
         Parameters
         ----------
