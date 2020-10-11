@@ -16,6 +16,14 @@ airframe structures. This project ports the original fortran code to pure python
     plotting.plot_stress(plate)
 ```
 
+## Installation
+
+`pip install bjsfm`
+
+## Documentation
+
+https://bjsfm.readthedocs.io
+
 ## Features
 
 - [ ] Lekhnitskii's anisotropic elasticity solutions for loaded (cosine distribution) and unloaded holes
@@ -23,10 +31,6 @@ airframe structures. This project ports the original fortran code to pure python
     - [ ] displacements
 - [ ] Combined bearing and bypass 2D infinite plate stress distribution
 - [ ] Optional DeJong tension (or compression) bearing correction
-
-## Installation
-
-`pip install bjsfm`
 
 ## Contribute
 

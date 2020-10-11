@@ -18,6 +18,16 @@ airframe structures. This project ports the original fortran code to pure python
     from bjsfm import plotting
     plotting.plot_stress(plate)
 
+Installation
+------------
+
+``pip install bjsfm``
+
+Documentation
+-------------
+
+https://bjsfm.readthedocs.io
+
 Features
 --------
 
@@ -28,11 +38,6 @@ Features
 
 * [ ] Combined bearing and bypass 2D infinite plate stress distribution
 * [ ] Optional DeJong tension (or compression) bearing correction
-
-Installation
-------------
-
-``pip install bjsfm``
 
 Contribute
 ----------
