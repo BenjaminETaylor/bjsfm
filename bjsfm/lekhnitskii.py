@@ -149,6 +149,7 @@ class Hole(abc.ABC):
     Notes
     -----
     The following assumptions apply for plates in a state of generalized plane stress.
+
     #. The plates are homogeneous and a plane of elastic symmetry which is parallel to their middle plane
        exists at every point.
     #. Applied forces act within planes that are parallel and symmetric to the middle plane of the plates,
@@ -566,7 +567,8 @@ class LoadedHole(Hole):
     -----
     Bearing distribution as shown below Ref. [4]_
 
-    .. image:: /docs/img/cosine_distribution.png
+    .. image:: ../img/cosine_distribution.png
+       :height: 400px
 
     Parameters
     ----------

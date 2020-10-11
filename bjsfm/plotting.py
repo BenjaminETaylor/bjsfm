@@ -13,9 +13,9 @@ def plot_stress(lek_1, lek_2=None, comp=0, rnum=100, tnum=100,
 
     Parameters
     ----------
-    lek_1 : :obj: lekhnitskii.UnloadedHole or :obj: lekhnitskii.LoadedHole
+    lek_1 : bjsfm.lekhnitskii.UnloadedHole or bjsfm.lekhnitskii.LoadedHole
         LoadedHole or UnloadedHole instance
-    lek_2 : :obj: lekhnitskii.UnloadedHole or :obj: lekhnitskii.LoadedHole, optional
+    lek_2 : bjsfm.lekhnitskii.UnloadedHole or bjsfm.lekhnitskii.LoadedHole, optional
         LoadedHole or UnloadedHole instance
     comp : {0, 1, 2}, optional
         stress component, default=0
@@ -27,8 +27,8 @@ def plot_stress(lek_1, lek_2=None, comp=0, rnum=100, tnum=100,
         (x0, x1) x-axis bounds, default=6*radius
     ybounds : tuple of int, optional
         (y0, y1) y-axis bounds default=6*radius
-    cmap : :obj: matplotlib.colors.ColorMap, optional
-        any colormap name from matplotlib.pyplot
+    cmap : str, optional
+        name of any colormap name from matplotlib.pyplot
     cmin : float, optional
         minimum value for colormap
     cmax : float, optional

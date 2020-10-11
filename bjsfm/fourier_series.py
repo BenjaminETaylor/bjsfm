@@ -2,7 +2,7 @@ import numpy as np
 
 
 def fourier_series_coefficients(f, T, N, return_complex=True, sample_rate=1000):
-    r"""Calculates the first 2*N+1 Fourier series coeff. of a periodic function.
+    r"""Calculates the first 2*N+1 Fourier series coefficients of a periodic function.
 
     Given a periodic, function f(t) with period T, this function returns the
     complex coefficients {c0,c1,c2,...}
