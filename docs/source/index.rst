@@ -44,12 +44,12 @@ Obtain stresses from the plates and combine. ::
 
     step = 0.015  # characteric distance [in]
     num_pnts = 100
-    x_pnts = [r * np.cos(theta) for r, theta in
-             zip([d/2 + step] * num_pnts, np.linspace(0, 2 * np.pi, num=num_pnts, endpoint=False))]
-    y_pnts = [r * np.sin(theta) for r, theta in
-             zip([d/2 + step] * num_pnts, np.linspace(0, 2 * np.pi, num=num_pnts, endpoint=False))]
-    byp_stress = byp.stress(x_pnts, y_pnts)
-    brg_stress = brg.stress(x_pnts, y_pnts)
+    r = np.array([d/2 + step] * num_pnts)
+    theta = np.linspace(0, 2 * np.pi, num=num_pnts, endpoint=False)
+    x = r * np.cos(theta)
+    y = r * np.sin(theta)
+    byp_stress = byp.stress(x, y)
+    brg_stress = brg.stress(x, y)
     total_stress = byp_stress + brg_stress
     # use total stress for failure calculations ...
 
