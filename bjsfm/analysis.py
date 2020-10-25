@@ -3,7 +3,7 @@ import bjsfm.lekhnitskii as lek
 
 
 class MaxStrain:
-    """ A class for analyzing joint failure with using max strain failure theory.
+    """A class for analyzing joint failure using max strain failure theory.
 
     Parameters
     ----------
@@ -43,7 +43,7 @@ class MaxStrain:
         self.t = thickness
         self.r = diameter/2.
         self.a = np.array(a_matrix)
-        self.a_inv = np.linalg.inv(a)
+        self.a_inv = np.linalg.inv(self.a)
         self.tens = np.array(tension) if tension else None
         self.comp = np.array(compression) if compression else None
         self.shear = np.array(shear) if shear else None
@@ -56,9 +56,20 @@ class MaxStrain:
         y = r * np.sin(theta)
         return x, y
 
-    def _strain_margins(self, strain):
+    @staticmethod
+    def _strain_margins(strains, e1t=None, e1c=None, e2t=None, e2c=None, e12=None):
         """Calculates margins of safety"""
-        raise NotImplementedError("Oops! Haven't implemented this yet.")
+        margins = [np.nan]*3
+        if e1t and e1c:
+            # 0 deg
+            margins[0] = e1t/strains[0] - 1 if strains[0] > 0. else e1c/strains[0] - 1
+        if e2t and e2c:
+            # 90 deg
+            margins[1] = e2t/strains[1] - 1 if strains[1] > 0. else e2c/strains[1] - 1
+        if e12:
+            # shear
+            margins[2] = e12/strains[2] - 1
+        return margins
 
     def stresses(self, bearing, bypass, rc=0., num=100):
         """ Calculate stresses
@@ -116,8 +127,10 @@ class MaxStrain:
         a_inv = self.a_inv
         stresses = self.stresses(bearing, bypass, rc=rc, num=num)
         for stress in stresses:
-            strain = a_inv.dot(stress)
-            margins.append(self._strain_margins(strain))
+            # x-direction
+            strain = a_inv.dot(stress/self.t)
+            e1t, e1c, e2t, e2c, e12 = self.tens[0], self.comp[0], self.tens[2], self.comp[2], self.shear[0]
+            margins.append(self._strain_margins(strain, e1t=e1t, e1c=e1c, e2t=e2t, e2c=e2c, e12=e12))
         return margins
 
 
