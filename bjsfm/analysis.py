@@ -49,29 +49,29 @@ class MaxStrain:
     a_inv : ndarray
         2D 3x3 Inverse A-matrix from CLPT
     et0 : float
-        tension strain allowable in 0 deg direction
+        plate tension strain allowable in 0 deg direction
     et90 : float
-        tension strain allowable in 90 deg direction
+        plate tension strain allowable in 90 deg direction
     et45 : float
-        tension strain allowable in 45 deg direction
+        plate tension strain allowable in 45 deg direction
     etn45 : float
-        tension strain allowable in -45 deg direction
+        plate tension strain allowable in -45 deg direction
     ec0 : float
-        compression strain allowable in 0 deg direction
+        plate compression strain allowable in 0 deg direction
     ec90 : float
-        compression strain allowable in 90 deg direction
+        plate compression strain allowable in 90 deg direction
     ec45 : float
-        compression strain allowable in 45 deg direction
+        plate compression strain allowable in 45 deg direction
     ecn45 : float
-        compression strain allowable in -45 deg direction
+        plate compression strain allowable in -45 deg direction
     es0 : float
-        shear strain allowable in 0 deg direction
+        plate shear strain allowable in 0 deg direction
     es90 : float
-        shear strain allowable in 90 deg direction
+        plate shear strain allowable in 90 deg direction
     es45 : float
-        shear strain allowable in 45 deg direction
+        plate shear strain allowable in 45 deg direction
     esn45 : float
-        shear strain allowable in -45 deg direction
+        plate shear strain allowable in -45 deg direction
 
     """
 
@@ -92,10 +92,28 @@ class MaxStrain:
         y = r * np.sin(theta)
         return x, y
 
-    @staticmethod
-    def _strain_margins(strains):
+    def _strain_margins(self, strains):
         """Calculates margins of safety"""
-        raise NotImplementedError("Oops! Haven't implemented this yet.")
+        e_allow = self.e_allow
+        margins = np.empty((strains.shape[0], 6))
+        margins[:] = np.nan
+        # 0 deg direction
+        if e_allow['et0'] and e_allow['ec0']:
+            x_strains = strains[:, 0]
+            margins[:, 0] = np.select(
+                [x_strains > 0, x_strains < 0], [e_allow['et0']/x_strains - 1, -abs(e_allow['ec0'])/x_strains - 1])
+        # 90 deg direction
+        if e_allow['et90'] and e_allow['ec90']:
+            y_strains = strains[:, 1]
+            margins[:, 1] = np.select(
+                [y_strains > 0, y_strains < 0], [e_allow['et90']/y_strains - 1, -abs(e_allow['ec90'])/y_strains - 1])
+        # 0/90 shear
+        if e_allow['es0'] and e_allow['es90']:
+            xy_strains = np.abs(strains[:, 2])
+            es_allow = min(abs(e_allow['es0']), abs(e_allow['es90']))
+            margins[:, 2] = es_allow/xy_strains - 1
+        # TODO: rotate strains and check 45 and -45 directions
+        return margins
 
     def stresses(self, bearing, bypass, rc=0., num=100):
         """ Calculate stresses
