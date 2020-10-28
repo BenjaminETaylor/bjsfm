@@ -85,35 +85,101 @@ class MaxStrain:
                         'ec45': ec45, 'ecn45': ecn45, 'es0': es0, 'es90': es90, 'es45': es45, 'esn45': esn45}
 
     def _radial_points(self, step, num_pnts):
-        """Calculates x, y points"""
+        """Calculates x, y points
+
+        Parameters
+        ----------
+        step : float
+            distance away from hole
+        num_pnts: int
+            number of points
+
+        Returns
+        -------
+        x, y : ndarray
+            1D arrays, cartesian x, y locations
+
+        """
         r = np.array([self.r + step] * num_pnts)
         theta = np.linspace(0, 2*np.pi, num=num_pnts, endpoint=False)
         x = r * np.cos(theta)
         y = r * np.sin(theta)
         return x, y
 
-    def _strain_margins(self, strains):
-        """Calculates margins of safety"""
-        e_allow = self.e_allow
-        margins = np.empty((strains.shape[0], 6))
+    @staticmethod
+    def _strain_margins(strains, et0=None, ec0=None, et90=None, ec90=None, es0=None, es90=None):
+        r"""Calculates margins of safety
+
+        Parameters
+        ----------
+        strains : ndarray
+            2D nx3 array of [[:math: `\epsilon_x, \epsilon_y, \gamma_{xy}`], ...] in-plane strains
+        et0 : float, optional
+            tension strain allowable in 0 deg direction
+        et90 : float, optional
+            tension strain allowable in 90 deg direction
+        ec0 : float, optional
+            compression strain allowable in 0 deg direction
+        ec90 : float, optional
+            compression strain allowable in 90 deg direction
+        es0 : float, optional
+            shear strain allowable in 0 deg direction
+        es90 : float, optional
+            shear strain allowable in 90 deg direction
+
+        Returns
+        -------
+        margins : ndarray
+            2D nx3 array [[x-dir margin, y-dir margin, xy margin], ...]
+
+        """
+        margins = np.empty((strains.shape[0], 3))
         margins[:] = np.nan
         # 0 deg direction
-        if e_allow['et0'] and e_allow['ec0']:
+        if et0 and ec0:
             x_strains = strains[:, 0]
             margins[:, 0] = np.select(
-                [x_strains > 0, x_strains < 0], [e_allow['et0']/x_strains - 1, -abs(e_allow['ec0'])/x_strains - 1])
+                [x_strains > 0, x_strains < 0], [et0/x_strains - 1, -abs(ec0)/x_strains - 1])
         # 90 deg direction
-        if e_allow['et90'] and e_allow['ec90']:
+        if et90 and ec90:
             y_strains = strains[:, 1]
             margins[:, 1] = np.select(
-                [y_strains > 0, y_strains < 0], [e_allow['et90']/y_strains - 1, -abs(e_allow['ec90'])/y_strains - 1])
+                [y_strains > 0, y_strains < 0], [et90/y_strains - 1, -abs(ec90)/y_strains - 1])
         # 0/90 shear
-        if e_allow['es0'] and e_allow['es90']:
+        if es0 and es90:
             xy_strains = np.abs(strains[:, 2])
-            es_allow = min(abs(e_allow['es0']), abs(e_allow['es90']))
-            margins[:, 2] = es_allow/xy_strains - 1
-        # TODO: rotate strains and check 45 and -45 directions
+            es = min(abs(es0), abs(es90))
+            margins[:, 2] = es/xy_strains - 1
         return margins
+
+    @staticmethod
+    def _rotate_strains(strains, angle=0.):
+        r"""Rotates the strain components by given angle
+
+        The rotation angle is positive counter-clockwise from the positive x-axis in the cartesian xy-plane.
+
+        Parameters
+        ----------
+        strains : ndarray
+            2D nx3 array of [:math: `\epsilon_x, \epsilon_y, \gamma_{xy}`] in-plane strains
+        angle : float, default 0.
+            angle measured counter-clockwise from positive x-axis (radians)
+
+        Returns
+        -------
+        ndarray
+            2D nx3 array of [:math: `\epsilon_x', \epsilon_y', \gamma_{xy}'`] rotated stresses
+
+        """
+        c = np.cos(angle)
+        s = np.sin(angle)
+        rotation_matrix = np.array([
+            [c**2, s**2, 2*s*c],
+            [s**2, c**2, -2*s*c],
+            [-2*s*c, 2*s*c, c**2 - s**2]
+        ])
+        strains = rotation_matrix @ strains.T
+        return strains.T
 
     def stresses(self, bearing, bypass, rc=0., num=100):
         """ Calculate stresses
@@ -191,8 +257,17 @@ class MaxStrain:
             2D numx6 array of margins of safety
 
         """
-        margins = []
+        e_all = self.e_allow
+        margins = np.empty((num, 6))
+        margins[:] = np.nan
+        # check 0/90 direction
         strains = self.strains(bearing, bypass, rc=rc, num=num)
-        return self._strain_margins(strains)
+        margins[:, :3] = self._strain_margins(strains, et0=e_all['et0'], ec0=e_all['ec0'], et90=e_all['et90'],
+                                              ec90=e_all['ec90'], es0=e_all['es0'], es90=e_all['es90'])
+        # check 45/-45 direction
+        strains = self._rotate_strains(strains, angle=np.deg2rad(45))
+        margins[:, 3:] = self._strain_margins(strains, et0=e_all['et45'], ec0=e_all['ec45'], et90=e_all['etn45'],
+                                              ec90=e_all['ecn45'], es0=e_all['es45'], es90=e_all['esn45'])
+        return margins
 
 

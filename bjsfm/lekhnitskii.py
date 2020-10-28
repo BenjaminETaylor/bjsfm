@@ -38,8 +38,8 @@ def rotate_plane_stress(stresses, angle=0.):
     ----------
     stresses : ndarray
         2D array of [:math: `\sigma_x, \sigma_y, \tau_{xy}`] in-plane stresses
-    angle : float optional
-        angle measured counter-clockwise from positive x-axis (radians), defaults=0
+    angle : float, default 0.
+        angle measured counter-clockwise from positive x-axis (radians)
 
     Returns
     -------
@@ -54,7 +54,8 @@ def rotate_plane_stress(stresses, angle=0.):
         [s**2, c**2, -2*s*c],
         [-s*c, s*c, c**2-s**2]
     ])
-    return np.array([rotation_matrix.dot(stresses[i]) for i in range(len(stresses))])
+    stresses = rotation_matrix @ stresses.T
+    return stresses.T
 
 
 def rotate_material_matrix(a_inv, angle=0.):
@@ -70,7 +71,7 @@ def rotate_material_matrix(a_inv, angle=0.):
     ----------
     a_inv : ndarray
         2D (3, 3) inverse CLPT A-matrix
-    angle : float
+    angle : float, default 0.
         angle measured counter-clockwise from positive x-axis (radians)
 
     Returns
@@ -120,8 +121,8 @@ def rotate_complex_parameters(mu1, mu2, angle=0.):
         first complex parameter
     mu2 : complex
         second complex parameter
-    angle : float optional
-        angle measured counter-clockwise from positive x-axis (radians), defaults=0
+    angle : float, default 0.
+        angle measured counter-clockwise from positive x-axis (radians)
 
     Returns
     -------
@@ -670,7 +671,7 @@ class LoadedHole(Hole):
 
         Parameters
         ----------
-        sample_rate : int, optional
+        sample_rate : int, default 100000
             used to tune the fast fourier transform (FFT) algorithm for accuracy
 
         Returns
@@ -711,7 +712,7 @@ class LoadedHole(Hole):
 
         Parameters
         ----------
-        sample_rate : int, optional
+        sample_rate : int, default 100000
             used to tune the fast fourier transform (FFT) algorithm for accuracy
 
         Returns
