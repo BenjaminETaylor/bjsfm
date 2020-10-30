@@ -75,7 +75,7 @@ class MaxStrain:
 
     """
 
-    def __init__(self, thickness, diameter,  a_matrix, et0=None, et90=None, et45=None, etn45=None, ec0=None, ec90=None,
+    def __init__(self, a_matrix, thickness, diameter, et0=None, et90=None, et45=None, etn45=None, ec0=None, ec90=None,
                  ec45=None, ecn45=None, es0=None, es90=None, es45=None, esn45=None):
         self.t = thickness
         self.r = diameter/2.
@@ -255,6 +255,8 @@ class MaxStrain:
         -------
         ndarray
             2D numx6 array of margins of safety
+            [[<0 deg margin>, <90 deg margin>, <0/90 shear margin>,
+            <45 deg margin>, <-45 deg margin>, <45/-45 shear margin>], ...]
 
         """
         e_all = self.e_allow
