@@ -1,5 +1,5 @@
 import numpy as np
-import bjsfm.lekhnitskii as lek
+import bjsfm.lekhnitskii as lk
 
 
 class MaxStrain:
@@ -134,22 +134,24 @@ class MaxStrain:
 
         """
         margins = np.empty((strains.shape[0], 3))
-        margins[:] = np.nan
-        # 0 deg direction
-        if et0 and ec0:
-            x_strains = strains[:, 0]
-            margins[:, 0] = np.select(
-                [x_strains > 0, x_strains < 0], [et0/x_strains - 1, -abs(ec0)/x_strains - 1])
-        # 90 deg direction
-        if et90 and ec90:
-            y_strains = strains[:, 1]
-            margins[:, 1] = np.select(
-                [y_strains > 0, y_strains < 0], [et90/y_strains - 1, -abs(ec90)/y_strains - 1])
-        # 0/90 shear
-        if es0 and es90:
-            xy_strains = np.abs(strains[:, 2])
-            es = min(abs(es0), abs(es90))
-            margins[:, 2] = es/xy_strains - 1
+        margins[:] = np.inf
+        with np.errstate(divide='ignore'):
+            # 0 deg direction
+            if et0 and ec0:
+                x_strains = strains[:, 0]
+                margins[:, 0] = np.select(
+                    [x_strains > 0, x_strains < 0], [et0/x_strains - 1, -abs(ec0)/x_strains - 1])
+            # 90 deg direction
+            if et90 and ec90:
+                y_strains = strains[:, 1]
+                margins[:, 1] = np.select(
+                    [y_strains > 0, y_strains < 0], [et90/y_strains - 1, -abs(ec90)/y_strains - 1])
+            # 0/90 shear
+            if es0 and es90:
+                xy_strains = np.abs(strains[:, 2])
+                # i_nz = np.nonzero(xy_strains)
+                es = min(abs(es0), abs(es90))
+                margins[:, 2] = es/xy_strains - 1
         return margins
 
     @staticmethod
@@ -207,8 +209,8 @@ class MaxStrain:
         alpha = np.tan(bearing[1]/bearing[0]) if abs(bearing[0]) > 0. else 0.
         p = np.sqrt(np.sum(np.square(bearing)))
         x, y = self._radial_points(rc, num)
-        brg = lek.LoadedHole(p, d, t, a_inv, theta=alpha)
-        byp = lek.UnloadedHole(bypass, d, t, a_inv)
+        brg = lk.LoadedHole(p, d, t, a_inv, theta=alpha)
+        byp = lk.UnloadedHole(bypass, d, t, a_inv)
         byp_stress = byp.stress(x, y)
         brg_stress = brg.stress(x, y)
         return byp_stress + brg_stress
@@ -261,7 +263,6 @@ class MaxStrain:
         """
         e_all = self.e_allow
         margins = np.empty((num, 6))
-        margins[:] = np.nan
         # check 0/90 direction
         strains = self.strains(bearing, bypass, rc=rc, num=num)
         margins[:, :3] = self._strain_margins(strains, et0=e_all['et0'], ec0=e_all['ec0'], et90=e_all['et90'],

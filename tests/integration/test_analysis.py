@@ -1,4 +1,5 @@
 import unittest
+from bjsfm.lekhnitskii import rotate_plane_stress
 from bjsfm.analysis import MaxStrain
 from tests.test_data import *
 
@@ -13,4 +14,27 @@ class TestMaxStrain(unittest.TestCase):
             ec0=QUASI_UNC, ec90=QUASI_UNC, ec45=QUASI_UNC, ecn45=QUASI_UNC,
             es0=QUASI_SBS, es90=QUASI_SBS, es45=QUASI_SBS, esn45=QUASI_SBS,
         )
+        rc = 0.15
+        num = 4
+        bearing = [0, 0]
+        bypass = [100., 0., 0.]
+        margins = analysis.analyze(bearing, bypass, rc=rc, num=num)
+        e0, e90, es0 = analysis.strains(bearing, bypass, rc=rc, num=num)[1]
+        s0, s90, ss0 = analysis.stresses(bearing, bypass, rc=rc, num=num)[1]
+        calc_strains = QUASI_INV @ np.array([s0, s90, ss0])/QUASI_THICK
+        self.assertAlmostEqual(e0, calc_strains[0])
+        self.assertAlmostEqual(e90, calc_strains[1])
+        self.assertAlmostEqual(es0, calc_strains[2])
+        s45, sn45, ss45 = rotate_plane_stress(np.array([s0, s90, ss0]), angle=np.deg2rad(45.))
+        e45, en45, es45 = QUASI_INV @ np.array([s45, sn45, ss45])/QUASI_THICK
+        self.assertAlmostEqual(margins[1, 0], QUASI_UNT/e0 - 1)
+        self.assertAlmostEqual(margins[1, 1], -QUASI_UNC/e90 - 1)
+        self.assertAlmostEqual(margins[1, 2], QUASI_SBS/abs(es0) - 1)
+        self.assertAlmostEqual(margins[1, 3], QUASI_UNT/e45 - 1)
+        self.assertAlmostEqual(margins[1, 4], QUASI_UNT/en45 - 1)
+        self.assertAlmostEqual(margins[1, 5], QUASI_SBS/abs(es45) - 1)
+
+
+if __name__ == '__main__':
+    unittest.main()
 

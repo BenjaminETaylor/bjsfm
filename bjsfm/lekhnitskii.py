@@ -37,7 +37,7 @@ def rotate_plane_stress(stresses, angle=0.):
     Parameters
     ----------
     stresses : ndarray
-        2D array of [:math: `\sigma_x, \sigma_y, \tau_{xy}`] in-plane stresses
+        array of [:math: `\sigma_x, \sigma_y, \tau_{xy}`] in-plane stresses
     angle : float, default 0.
         angle measured counter-clockwise from positive x-axis (radians)
 
