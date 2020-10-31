@@ -2,7 +2,128 @@ import numpy as np
 import bjsfm.lekhnitskii as lk
 
 
-class MaxStrain:
+class Analysis:
+    """Parent class for analysis sub-classes
+
+    Parameters
+    ----------
+    thickness : float
+        plate thickness
+    diameter : float
+        hole diameter
+    a_matrix : array_like
+        2D 3x3 inverse A-matrix from CLPT
+
+    Attributes
+    ----------
+    t : float
+        plate thickness
+    r : float
+        hole radius
+    a : ndarray
+        2D 3x3 A-matrix from CLPT
+    a_inv : ndarray
+        2D 3x3 Inverse A-matrix from CLPT
+
+    """
+
+    def __init__(self, a_matrix, thickness, diameter):
+        self.t = thickness
+        self.r = diameter/2.
+        self.a = np.array(a_matrix)
+        self.a_inv = np.linalg.inv(self.a)
+
+    def _radial_points(self, step, num_pnts):
+        """Calculates x, y points
+
+        Parameters
+        ----------
+        step : float
+            distance away from hole
+        num_pnts: int
+            number of points
+
+        Returns
+        -------
+        x, y : ndarray
+            1D arrays, cartesian x, y locations
+
+        """
+        r = np.array([self.r + step] * num_pnts)
+        theta = np.linspace(0, 2*np.pi, num=num_pnts, endpoint=False)
+        x = r * np.cos(theta)
+        y = r * np.sin(theta)
+        return x, y
+
+    def stresses(self, bearing, bypass, rc=0., num=100, w=0.):
+        """ Calculate stresses
+
+        Parameters
+        ----------
+        bearing : array_like
+            1D 1x2 array bearing load [Px, Py] (force)
+        bypass : array_like
+            1D 1x3 array bypass loads [Nx, Ny, Nxy] (force/unit-length)
+        rc : float, default 0.
+            characteristic distance
+        num : int, default 100
+            number of points to check around hole
+        w : float, default 0.
+            pitch or width in bearing load direction
+            (set to 0. for infinite plate)
+
+        Returns
+        -------
+        ndarray
+            2D numx3 array of plate stresses
+
+        """
+        d = self.r*2
+        t = self.t
+        a_inv = self.a_inv
+        bypass = np.array(bypass)
+        theta = np.tan(bearing[1]/bearing[0]) if abs(bearing[0]) > 0. else 0.
+        p = np.sqrt(np.sum(np.square(bearing)))
+        if w:  # DeJong correction for finite width
+            brg_axis_bypass = lk.rotate_plane_stress(bypass, angle=theta)
+            sign = np.sign(brg_axis_bypass[0])
+            bypass += lk.rotate_plane_stress(np.array([p/(2*w)*sign, 0., 0.]), angle=-theta)
+        x, y = self._radial_points(rc, num)
+        brg = lk.LoadedHole(p, d, t, a_inv, theta=theta)
+        byp = lk.UnloadedHole(bypass, d, t, a_inv)
+        byp_stress = byp.stress(x, y)
+        brg_stress = brg.stress(x, y)
+        return byp_stress + brg_stress
+
+    def strains(self, bearing, bypass, rc=0., num=100, w=0.):
+        """ Calculate strains
+
+        Parameters
+        ----------
+        bearing : array_like
+            1D 1x2 array bearing load [Px, Py] (force)
+        bypass : array_like
+            1D 1x3 array bypass loads [Nx, Ny, Nxy] (force/unit-length)
+        rc : float, default 0.
+            characteristic distance
+        num : int, default 100
+            number of points to check around hole
+        w : float, default 0.
+            pitch or width in bearing load direction
+            (set to 0. for infinite plate)
+
+        Returns
+        -------
+        ndarray
+            2D numx3 array of plate strains
+
+        """
+        stresses = self.stresses(bearing, bypass, rc=rc, num=num, w=w)
+        strains = self.a_inv @ stresses.T/self.t
+        return strains.T
+
+
+class MaxStrain(Analysis):
     """A class for analyzing joint failure using max strain failure theory.
 
     Parameters
@@ -77,34 +198,9 @@ class MaxStrain:
 
     def __init__(self, a_matrix, thickness, diameter, et0=None, et90=None, et45=None, etn45=None, ec0=None, ec90=None,
                  ec45=None, ecn45=None, es0=None, es90=None, es45=None, esn45=None):
-        self.t = thickness
-        self.r = diameter/2.
-        self.a = np.array(a_matrix)
-        self.a_inv = np.linalg.inv(self.a)
+        super(MaxStrain, self).__init__(a_matrix, thickness, diameter)
         self.e_allow = {'et0': et0, 'et90': et90, 'et45': et45, 'etn45': etn45, 'ec0': ec0, 'ec90': ec90,
                         'ec45': ec45, 'ecn45': ecn45, 'es0': es0, 'es90': es90, 'es45': es45, 'esn45': esn45}
-
-    def _radial_points(self, step, num_pnts):
-        """Calculates x, y points
-
-        Parameters
-        ----------
-        step : float
-            distance away from hole
-        num_pnts: int
-            number of points
-
-        Returns
-        -------
-        x, y : ndarray
-            1D arrays, cartesian x, y locations
-
-        """
-        r = np.array([self.r + step] * num_pnts)
-        theta = np.linspace(0, 2*np.pi, num=num_pnts, endpoint=False)
-        x = r * np.cos(theta)
-        y = r * np.sin(theta)
-        return x, y
 
     @staticmethod
     def _strain_margins(strains, et0=None, ec0=None, et90=None, ec90=None, es0=None, es90=None):
@@ -183,63 +279,7 @@ class MaxStrain:
         strains = rotation_matrix @ strains.T
         return strains.T
 
-    def stresses(self, bearing, bypass, rc=0., num=100):
-        """ Calculate stresses
-
-        Parameters
-        ----------
-        bearing : array_like
-            1D 1x2 array bearing load [Px, Py] (force)
-        bypass : array_like
-            1D 1x3 array bypass loads [Nx, Ny, Nxy] (force/unit-length)
-        rc : float, default 0.
-            characteristic distance
-        num : int, default 100
-            number of points to check around hole
-
-        Returns
-        -------
-        ndarray
-            2D numx3 array of plate stresses
-
-        """
-        d = self.r*2
-        t = self.t
-        a_inv = self.a_inv
-        alpha = np.tan(bearing[1]/bearing[0]) if abs(bearing[0]) > 0. else 0.
-        p = np.sqrt(np.sum(np.square(bearing)))
-        x, y = self._radial_points(rc, num)
-        brg = lk.LoadedHole(p, d, t, a_inv, theta=alpha)
-        byp = lk.UnloadedHole(bypass, d, t, a_inv)
-        byp_stress = byp.stress(x, y)
-        brg_stress = brg.stress(x, y)
-        return byp_stress + brg_stress
-
-    def strains(self, bearing, bypass, rc=0., num=100):
-        """ Calculate strains
-
-        Parameters
-        ----------
-        bearing : array_like
-            1D 1x2 array bearing load [Px, Py] (force)
-        bypass : array_like
-            1D 1x3 array bypass loads [Nx, Ny, Nxy] (force/unit-length)
-        rc : float, default 0.
-            characteristic distance
-        num : int, default 100
-            number of points to check around hole
-
-        Returns
-        -------
-        ndarray
-            2D numx3 array of plate strains
-
-        """
-        stresses = self.stresses(bearing, bypass, rc=rc, num=num)
-        strains = self.a_inv @ stresses.T/self.t
-        return strains.T
-
-    def analyze(self, bearing, bypass, rc=0., num=100):
+    def analyze(self, bearing, bypass, rc=0., num=100, w=0.):
         """ Analyze the joint for a set of loads
 
         Parameters
@@ -252,6 +292,9 @@ class MaxStrain:
             characteristic distance
         num : int, default 100
             number of points to check around hole
+        w : float, default 0.
+            pitch or width in bearing load direction
+            (set to 0. for infinite plate)
 
         Returns
         -------
@@ -264,7 +307,7 @@ class MaxStrain:
         e_all = self.e_allow
         margins = np.empty((num, 6))
         # check 0/90 direction
-        strains = self.strains(bearing, bypass, rc=rc, num=num)
+        strains = self.strains(bearing, bypass, rc=rc, num=num, w=w)
         margins[:, :3] = self._strain_margins(strains, et0=e_all['et0'], ec0=e_all['ec0'], et90=e_all['et90'],
                                               ec90=e_all['ec90'], es0=e_all['es0'], es90=e_all['es90'])
         # check 45/-45 direction
