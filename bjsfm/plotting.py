@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_stress(lek_1, lek_2=None, comp=0, rnum=100, tnum=100,
+def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100,
                 xbounds=None, ybounds=None, cmap='jet', cmin=None, cmax=None):
     """ Plots stresses
 
@@ -13,9 +13,9 @@ def plot_stress(lek_1, lek_2=None, comp=0, rnum=100, tnum=100,
 
     Parameters
     ----------
-    lek_1 : bjsfm.lekhnitskii.UnloadedHole or bjsfm.lekhnitskii.LoadedHole
+    lk_1 : bjsfm.lekhnitskii.UnloadedHole or bjsfm.lekhnitskii.LoadedHole
         LoadedHole or UnloadedHole instance
-    lek_2 : bjsfm.lekhnitskii.UnloadedHole or bjsfm.lekhnitskii.LoadedHole, optional
+    lk_2 : bjsfm.lekhnitskii.UnloadedHole or bjsfm.lekhnitskii.LoadedHole, optional
         LoadedHole or UnloadedHole instance
     comp : {0, 1, 2}, optional
         stress component, default=0
@@ -35,7 +35,7 @@ def plot_stress(lek_1, lek_2=None, comp=0, rnum=100, tnum=100,
         maximum value for colormap
 
     """
-    radius = lek_1.r
+    radius = lk_1.r
 
     xbounds = xbounds if xbounds else [-6*radius, 6*radius]
     ybounds = ybounds if ybounds else [-6*radius, 6*radius]
@@ -50,10 +50,10 @@ def plot_stress(lek_1, lek_2=None, comp=0, rnum=100, tnum=100,
     y = np.array(radiis) * np.sin(thetas)
     x.shape = y.shape = (tnum, rnum)
 
-    stress = lek_1.stress(x.flatten(), y.flatten())[:, comp]
-    if lek_2:
-        assert lek_1.r == lek_2.r, "Cannot plot plates with different radii."
-        stress_2 = lek_2.stress(x.flatten(), y.flatten())[:, comp]
+    stress = lk_1.stress(x.flatten(), y.flatten())[:, comp]
+    if lk_2:
+        assert lk_1.r == lk_2.r, "Cannot plot plates with different radii."
+        stress_2 = lk_2.stress(x.flatten(), y.flatten())[:, comp]
         stress += stress_2
 
     stress.shape = (tnum, rnum)

@@ -1,3 +1,12 @@
+"""This module defines analysis routines and associated machinery
+
+Notes
+-----
+Without laminate details like layup and ply properties, this module is limited to max strain analysis. However, with
+a third party CLPT package , the parent class `Analysis` can be used to extend this module to check max stress, Tsai-Wu,
+Tsai-Hill, etc.
+
+"""
 import numpy as np
 import bjsfm.lekhnitskii as lk
 
@@ -33,7 +42,7 @@ class Analysis:
         self.a = np.array(a_matrix)
         self.a_inv = np.linalg.inv(self.a)
 
-    def _radial_points(self, step, num_pnts):
+    def radial_points(self, step, num_pnts):
         """Calculates x, y points
 
         Parameters
@@ -54,6 +63,28 @@ class Analysis:
         x = r * np.cos(theta)
         y = r * np.sin(theta)
         return x, y
+
+    @staticmethod
+    def bearing_angle(bearing):
+        """Calculates bearing load and angle
+
+        Parameters
+        ----------
+        bearing : array_like
+            1D 1x2 array [Px, Py]
+
+        Returns
+        -------
+        p, theta : float
+            bearing laod (p) and angle (theta)
+
+        """
+        p = np.sqrt(np.sum(np.square(bearing)))
+        if p == 0:
+            return 0., 0.
+        theta = np.arccos(np.array([1, 0]).dot(bearing) / p)
+        theta = theta*np.sign(bearing[1]) if bearing[1] else theta
+        return p, theta
 
     def stresses(self, bearing, bypass, rc=0., num=100, w=0.):
         """ Calculate stresses
@@ -81,14 +112,14 @@ class Analysis:
         d = self.r*2
         t = self.t
         a_inv = self.a_inv
+        bearing = np.array(bearing)
         bypass = np.array(bypass)
-        theta = np.tan(bearing[1]/bearing[0]) if abs(bearing[0]) > 0. else 0.
-        p = np.sqrt(np.sum(np.square(bearing)))
+        p, theta = self.bearing_angle(bearing)
         if w:  # DeJong correction for finite width
-            brg_axis_bypass = lk.rotate_plane_stress(bypass, angle=theta)
-            sign = np.sign(brg_axis_bypass[0])
+            brg_dir_bypass = lk.rotate_plane_stress(bypass, angle=theta)
+            sign = np.sign(brg_dir_bypass[0])
             bypass += lk.rotate_plane_stress(np.array([p/(2*w)*sign, 0., 0.]), angle=-theta)
-        x, y = self._radial_points(rc, num)
+        x, y = self.radial_points(rc, num)
         brg = lk.LoadedHole(p, d, t, a_inv, theta=theta)
         byp = lk.UnloadedHole(bypass, d, t, a_inv)
         byp_stress = byp.stress(x, y)
