@@ -42,12 +42,12 @@ def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100,
     max_bounds = max(np.max(np.abs(xbounds)), np.max(np.abs(ybounds)))
 
     thetas = []
-    radiis = []
+    radii = []
     for step in np.linspace(0, 2*max_bounds, num=tnum, endpoint=True):
         thetas.extend(np.linspace(0, 2*np.pi, num=rnum))
-        radiis.extend([radius+step]*rnum)
-    x = np.array(radiis) * np.cos(thetas)
-    y = np.array(radiis) * np.sin(thetas)
+        radii.extend([radius+step]*rnum)
+    x = np.array(radii) * np.cos(thetas)
+    y = np.array(radii) * np.sin(thetas)
     x.shape = y.shape = (tnum, rnum)
 
     stress = lk_1.stress(x.flatten(), y.flatten())[:, comp]

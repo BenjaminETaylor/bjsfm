@@ -15,10 +15,10 @@ class TestMaxStrainQuasi(unittest.TestCase):
             es0=QUASI_SBS, es90=QUASI_SBS, es45=QUASI_SBS, esn45=QUASI_SBS,
         )
 
-    def test_radial_points(self):
+    def test_xy_points(self):
         rc = 0.
         num = 4
-        x, y = self.analysis.radial_points(rc, num_pnts=num)
+        x, y = self.analysis.xy_points(rc, num_pnts=num)
         radius = DIAMETER/2
         self.assertAlmostEqual(x[0], radius)
         self.assertAlmostEqual(x[1], 0.)

@@ -9,6 +9,7 @@ Tsai-Hill, etc.
 """
 import numpy as np
 import bjsfm.lekhnitskii as lk
+from bjsfm.plotting import plot_stress
 
 
 class Analysis:
@@ -42,7 +43,57 @@ class Analysis:
         self.a = np.array(a_matrix)
         self.a_inv = np.linalg.inv(self.a)
 
-    def radial_points(self, step, num_pnts):
+    def _loaded(self, bearing):
+        """Lekhnitskii's loaded hole solution
+
+        Parameters
+        ----------
+        bearing : array_like
+            1D 1x2 array [Px, Py]
+
+        Returns
+        -------
+        bjsfm.lekhnitskii.LoadedHole
+
+        """
+        d = self.r*2
+        t = self.t
+        a_inv = self.a_inv
+        bearing = np.array(bearing)
+        p, theta = self.bearing_angle(bearing)
+        return lk.LoadedHole(p, d, t, a_inv, theta=theta)
+
+    def _unloaded(self, bearing, bypass, w=0.):
+        """Lekhnitskii's unloaded hole solution
+
+        Parameters
+        ----------
+        bearing : array_like
+            1D 1x2 array [Px, Py]
+        bypass : array_like
+            1D 1x3 array [Nx, Ny, Nxy]
+        w : float, default 0.
+            pitch or width in bearing load direction
+            (set to 0. for infinite plate)
+
+        Returns
+        -------
+        bjsfm.lekhnitskii.UnloadedHole
+
+        """
+        d = self.r*2
+        t = self.t
+        a_inv = self.a_inv
+        bearing = np.array(bearing)
+        bypass = np.array(bypass)
+        p, theta = self.bearing_angle(bearing)
+        if w:  # DeJong correction for finite width
+            brg_dir_bypass = lk.rotate_plane_stress(bypass, angle=theta)
+            sign = np.sign(brg_dir_bypass[0])
+            bypass += lk.rotate_plane_stress(np.array([p/(2*w)*sign, 0., 0.]), angle=-theta)
+        return lk.UnloadedHole(bypass, d, t, a_inv)
+
+    def xy_points(self, step, num_pnts):
         """Calculates x, y points
 
         Parameters
@@ -109,19 +160,9 @@ class Analysis:
             2D numx3 array of plate stresses
 
         """
-        d = self.r*2
-        t = self.t
-        a_inv = self.a_inv
-        bearing = np.array(bearing)
-        bypass = np.array(bypass)
-        p, theta = self.bearing_angle(bearing)
-        if w:  # DeJong correction for finite width
-            brg_dir_bypass = lk.rotate_plane_stress(bypass, angle=theta)
-            sign = np.sign(brg_dir_bypass[0])
-            bypass += lk.rotate_plane_stress(np.array([p/(2*w)*sign, 0., 0.]), angle=-theta)
-        x, y = self.radial_points(rc, num)
-        brg = lk.LoadedHole(p, d, t, a_inv, theta=theta)
-        byp = lk.UnloadedHole(bypass, d, t, a_inv)
+        x, y = self.xy_points(rc, num)
+        byp = self._unloaded(bearing, bypass, w=w)
+        brg = self._loaded(bearing)
         byp_stress = byp.stress(x, y)
         brg_stress = brg.stress(x, y)
         return byp_stress + brg_stress
@@ -152,6 +193,45 @@ class Analysis:
         stresses = self.stresses(bearing, bypass, rc=rc, num=num, w=w)
         strains = self.a_inv @ stresses.T/self.t
         return strains.T
+
+    def plot_stress(self, bearing, bypass, w=0., comp=0, rnum=100, tnum=100,
+                xbounds=None, ybounds=None, cmap='jet', cmin=None, cmax=None):
+        """ Plots stresses
+
+        Notes
+        -----
+        colormap options can be found at
+            https://matplotlib.org/3.1.1/tutorials/colors/colormaps.html
+
+        Parameters
+        ----------
+        bearing : array_like
+            1D 1x2 array bearing load [Px, Py] (force)
+        bypass : array_like
+            1D 1x3 array bypass loads [Nx, Ny, Nxy] (force/unit-length)
+        w : float, default 0.
+            pitch or width in bearing load direction
+            (set to 0. for infinite plate)
+        comp : {0, 1, 2}, optional
+            stress component, default=0
+        rnum : int, optional
+            number of points to plot along radius, default=100
+        tnum : int, optional
+            number of points to plot along circumference, default=100
+        xbounds : tuple of int, optional
+            (x0, x1) x-axis bounds, default=6*radius
+        ybounds : tuple of int, optional
+            (y0, y1) y-axis bounds default=6*radius
+        cmap : str, optional
+            name of any colormap name from matplotlib.pyplot
+        cmin : float, optional
+            minimum value for colormap
+        cmax : float, optional
+            maximum value for colormap
+
+        """
+        plot_stress(self._unloaded(bearing, bypass, w=w), self._loaded(bearing), comp=comp, rnum=rnum, tnum=tnum,
+                    xbounds=xbounds, ybounds=ybounds, cmap=cmap, cmin=cmin, cmax=cmax)
 
 
 class MaxStrain(Analysis):
