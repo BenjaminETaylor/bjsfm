@@ -59,7 +59,7 @@ class Analysis:
         d = self.r*2
         t = self.t
         a_inv = self.a_inv
-        bearing = np.array(bearing)
+        bearing = np.array(bearing, dtype=float)
         p, theta = self.bearing_angle(bearing)
         return lk.LoadedHole(p, d, t, a_inv, theta=theta)
 
@@ -84,8 +84,8 @@ class Analysis:
         d = self.r*2
         t = self.t
         a_inv = self.a_inv
-        bearing = np.array(bearing)
-        bypass = np.array(bypass)
+        bearing = np.array(bearing, dtype=float)
+        bypass = np.array(bypass, dtype=float)
         p, theta = self.bearing_angle(bearing)
         if w:  # DeJong correction for finite width
             brg_dir_bypass = lk.rotate_plane_stress(bypass, angle=theta)
@@ -235,7 +235,11 @@ class Analysis:
 
 
 class MaxStrain(Analysis):
-    """A class for analyzing joint failure using max strain failure theory.
+    """A class for analyzing joint failure using max strain failure theory
+
+    Notes
+    -----
+    This class only supports four angle laminates, and is setup for laminates with 0, 45, -45 and 90 degree plies.
 
     Parameters
     ----------
