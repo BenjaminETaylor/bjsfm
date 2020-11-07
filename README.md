@@ -29,8 +29,9 @@ https://bjsfm.readthedocs.io
 - [ ] Lekhnitskii's anisotropic elasticity solutions for loaded (cosine distribution) and unloaded holes
     - [X] stresses
     - [ ] displacements
-- [ ] Combined bearing and bypass 2D infinite plate stress distribution
-- [ ] Optional DeJong tension (or compression) bearing correction
+- [X] Combined bearing and bypass 2D infinite plate stress distribution
+- [X] Optional DeJong tension (or compression) finite width correction
+- [X] Max strain analysis
 
 ## Contribute
 
