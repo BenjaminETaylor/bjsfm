@@ -189,7 +189,7 @@ class Hole(abc.ABC):
 
     def __init__(self, diameter, thickness, a_inv):
         self.r = diameter/2.
-        self.a = np.array(a_inv)
+        self.a = np.array(a_inv, dtype=float)
         self.h = thickness
         self.mu1, self.mu2, self.mu1_bar, self.mu2_bar = self.roots()
 
@@ -369,8 +369,8 @@ class Hole(abc.ABC):
         mu1 = self.mu1
         mu2 = self.mu2
 
-        x = np.array(x)
-        y = np.array(y)
+        x = np.array(x, dtype=float)
+        y = np.array(y, dtype=float)
 
         z1 = x + mu1 * y
         z2 = x + mu2 * y
@@ -411,7 +411,7 @@ class UnloadedHole(Hole):
 
     def __init__(self, loads, diameter, thickness, a_inv):
         super().__init__(diameter, thickness, a_inv)
-        self.applied_stress = np.array(loads) / self.h
+        self.applied_stress = np.array(loads, dtype=float) / self.h
 
     def alpha(self):
         r"""Calculates the alpha loading term for three components of applied stress at infinity
@@ -925,8 +925,8 @@ class LoadedHole(Hole):
         rotation = -self.theta
 
         # convert points to polar coordinates
-        x = np.array(x)
-        y = np.array(y)
+        x = np.array(x, dtype=float)
+        y = np.array(y, dtype=float)
         r = np.sqrt(x**2 + y**2)
         # calculate angles and fix signs
         angles = np.arccos(np.array([1, 0]).dot(np.array([x, y])) / r)

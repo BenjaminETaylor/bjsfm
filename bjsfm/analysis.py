@@ -89,18 +89,18 @@ class Analysis:
         p, theta = self.bearing_angle(bearing)
         if w:  # DeJong correction for finite width
             brg_dir_bypass = lk.rotate_plane_stress(bypass, angle=theta)
-            sign = np.sign(brg_dir_bypass[0])
+            sign = np.sign(brg_dir_bypass[0]) if abs(brg_dir_bypass[0]) > 0 else 1.
             bypass += lk.rotate_plane_stress(np.array([p/(2*w)*sign, 0., 0.]), angle=-theta)
         return lk.UnloadedHole(bypass, d, t, a_inv)
 
-    def xy_points(self, step, num_pnts):
+    def xy_points(self, rc=0., num=100):
         """Calculates x, y points
 
         Parameters
         ----------
-        step : float
+        rc : float, default 0.
             distance away from hole
-        num_pnts: int
+        num: int, default 100
             number of points
 
         Returns
@@ -109,8 +109,8 @@ class Analysis:
             1D arrays, cartesian x, y locations
 
         """
-        r = np.array([self.r + step] * num_pnts)
-        theta = np.linspace(0, 2*np.pi, num=num_pnts, endpoint=False)
+        r = np.array([self.r + rc] * num)
+        theta = np.linspace(0, 2*np.pi, num=num, endpoint=False)
         x = r * np.cos(theta)
         y = r * np.sin(theta)
         return x, y
@@ -160,7 +160,7 @@ class Analysis:
             2D numx3 array of plate stresses
 
         """
-        x, y = self.xy_points(rc, num)
+        x, y = self.xy_points(rc=rc, num=num)
         byp = self._unloaded(bearing, bypass, w=w)
         brg = self._loaded(bearing)
         byp_stress = byp.stress(x, y)
