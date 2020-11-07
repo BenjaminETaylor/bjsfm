@@ -1,6 +1,12 @@
 API
 ===
 
+Analysis Module
+---------------
+
+.. automodule:: bjsfm.analysis
+    :members:
+
 Lekhnitskii Module
 ------------------
 

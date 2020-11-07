@@ -10,7 +10,7 @@ the lekhnitskii.f fortran file.
 
 ``python -m numpy.f2py -c -m lekhnitskii_f lekhnitskii.f``
 
-You may need to download a fortran compiler. For linux, GFortran will work and should be available on your distos
+You may need to download a fortran compiler. For linux, GFortran will work and should be available on your distros
 software center.
 
 Reference the `numpy documentation <https://numpy.org/doc/stable/f2py/>`_ for issues.

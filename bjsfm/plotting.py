@@ -17,12 +17,12 @@ def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100,
         LoadedHole or UnloadedHole instance
     lk_2 : bjsfm.lekhnitskii.UnloadedHole or bjsfm.lekhnitskii.LoadedHole, optional
         LoadedHole or UnloadedHole instance
-    comp : {0, 1, 2}, optional
-        stress component, default=0
-    rnum : int, optional
-        number of points to plot along radius, default=100
-    tnum : int, optional
-        number of points to plot along circumference, default=100
+    comp : {0, 1, 2}, default 0
+        stress component
+    rnum : int, default 100
+        number of points to plot along radius
+    tnum : int, default 100
+        number of points to plot along circumference
     xbounds : tuple of int, optional
         (x0, x1) x-axis bounds, default=6*radius
     ybounds : tuple of int, optional

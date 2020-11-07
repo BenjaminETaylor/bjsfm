@@ -22,7 +22,7 @@ class Analysis:
     diameter : float
         hole diameter
     a_matrix : array_like
-        2D 3x3 inverse A-matrix from CLPT
+        2D 3x3 A-matrix from CLPT
 
     Attributes
     ----------
@@ -40,7 +40,7 @@ class Analysis:
     def __init__(self, a_matrix, thickness, diameter):
         self.t = thickness
         self.r = diameter/2.
-        self.a = np.array(a_matrix)
+        self.a = np.array(a_matrix, dtype=float)
         self.a_inv = np.linalg.inv(self.a)
 
     def _loaded(self, bearing):
@@ -127,7 +127,7 @@ class Analysis:
         Returns
         -------
         p, theta : float
-            bearing laod (p) and angle (theta)
+            bearing load (p) and angle (theta)
 
         """
         p = np.sqrt(np.sum(np.square(bearing)))
@@ -212,16 +212,16 @@ class Analysis:
         w : float, default 0.
             pitch or width in bearing load direction
             (set to 0. for infinite plate)
-        comp : {0, 1, 2}, optional
-            stress component, default=0
-        rnum : int, optional
-            number of points to plot along radius, default=100
-        tnum : int, optional
-            number of points to plot along circumference, default=100
+        comp : {0, 1, 2}, default 0
+            stress component
+        rnum : int, default 100
+            number of points to plot along radius
+        tnum : int, default 100
+            number of points to plot along circumference
         xbounds : tuple of int, optional
-            (x0, x1) x-axis bounds, default=6*radius
+            (x0, x1) x-axis bounds, default 6*radius
         ybounds : tuple of int, optional
-            (y0, y1) y-axis bounds default=6*radius
+            (y0, y1) y-axis bounds, default 6*radius
         cmap : str, optional
             name of any colormap name from matplotlib.pyplot
         cmin : float, optional
