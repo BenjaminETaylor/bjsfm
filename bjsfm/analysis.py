@@ -93,6 +93,26 @@ class Analysis:
             bypass += lk.rotate_plane_stress(np.array([p/(2*w)*sign, 0., 0.]), angle=-theta)
         return lk.UnloadedHole(bypass, d, t, a_inv)
 
+    def polar_points(self, rc=0., num=100):
+        """Calculates r, theta points
+
+        Parameters
+        ----------
+        rc : float, default 0.
+            distance away from hole
+        num: int, default 100
+            number of points
+
+        Returns
+        -------
+        r, theta : ndarray
+            1D arrays, polar r, theta locations
+
+        """
+        r = np.array([self.r + rc] * num)
+        theta = np.linspace(0, 2*np.pi, num=num, endpoint=False)
+        return r, theta
+
     def xy_points(self, rc=0., num=100):
         """Calculates x, y points
 
@@ -109,8 +129,7 @@ class Analysis:
             1D arrays, cartesian x, y locations
 
         """
-        r = np.array([self.r + rc] * num)
-        theta = np.linspace(0, 2*np.pi, num=num, endpoint=False)
+        r, theta = self.polar_points(rc=rc, num=num)
         x = r * np.cos(theta)
         y = r * np.sin(theta)
         return x, y
@@ -314,6 +333,7 @@ class MaxStrain(Analysis):
     def __init__(self, a_matrix, thickness, diameter, et0=None, et90=None, et45=None, etn45=None, ec0=None, ec90=None,
                  ec45=None, ecn45=None, es0=None, es90=None, es45=None, esn45=None):
         super(MaxStrain, self).__init__(a_matrix, thickness, diameter)
+        # TODO: convert to dictionary argument keyed off integers for each angle {0: [<et>, <ec>, <es>], ...}
         self.e_allow = {'et0': et0, 'et90': et90, 'et45': et45, 'etn45': etn45, 'ec0': ec0, 'ec90': ec90,
                         'ec45': ec45, 'ecn45': ecn45, 'es0': es0, 'es90': es90, 'es45': es45, 'esn45': esn45}
 
