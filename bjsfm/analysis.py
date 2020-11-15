@@ -210,7 +210,7 @@ class Analysis:
 
         """
         stresses = self.stresses(bearing, bypass, rc=rc, num=num, w=w)
-        strains = self.a_inv @ stresses.T/self.t
+        strains = self.a_inv @ stresses.T*self.t
         return strains.T
 
     def plot_stress(self, bearing, bypass, w=0., comp=0, rnum=100, tnum=100,

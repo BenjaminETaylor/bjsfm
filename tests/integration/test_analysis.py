@@ -103,12 +103,12 @@ class TestMaxStrainQuasi(unittest.TestCase):
         margins = self.analysis.analyze(bearing, bypass, rc=rc, num=num)
         e0, e90, es0 = self.analysis.strains(bearing, bypass, rc=rc, num=num)[1]
         s0, s90, ss0 = self.analysis.stresses(bearing, bypass, rc=rc, num=num)[1]
-        calc_strains = QUASI_INV @ np.array([s0, s90, ss0])/QUASI_THICK
+        calc_strains = QUASI_INV @ np.array([s0, s90, ss0])*QUASI_THICK
         self.assertAlmostEqual(e0, calc_strains[0])
         self.assertAlmostEqual(e90, calc_strains[1])
         self.assertAlmostEqual(es0, calc_strains[2])
         s45, sn45, ss45 = rotate_plane_stress(np.array([s0, s90, ss0]), angle=np.deg2rad(45.))
-        e45, en45, es45 = QUASI_INV @ np.array([s45, sn45, ss45])/QUASI_THICK
+        e45, en45, es45 = QUASI_INV @ np.array([s45, sn45, ss45])*QUASI_THICK
         self.assertAlmostEqual(margins[1, 0], QUASI_UNT/e0 - 1)
         self.assertAlmostEqual(margins[1, 1], -QUASI_UNC/e90 - 1)
         self.assertAlmostEqual(margins[1, 2], QUASI_SBS/abs(es0) - 1)
