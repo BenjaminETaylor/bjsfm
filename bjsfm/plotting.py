@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100,
+def plot_stress(lk_1, lk_2=None, ax=None, comp=0, rnum=100, tnum=100,
                 xbounds=None, ybounds=None, cmap='jet', cmin=None, cmax=None):
     """ Plots stresses
 
@@ -17,6 +17,8 @@ def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100,
         LoadedHole or UnloadedHole instance
     lk_2 : bjsfm.lekhnitskii.UnloadedHole or bjsfm.lekhnitskii.LoadedHole, optional
         LoadedHole or UnloadedHole instance
+    ax : matplotlib.axes
+        a custom axes to plot on
     comp : {0, 1, 2}, default 0
         stress component
     rnum : int, default 100
@@ -58,7 +60,8 @@ def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100,
 
     stress.shape = (tnum, rnum)
 
-    fig, ax = plt.subplots()
+    if not ax:
+        fig, ax = plt.subplots()
     ax.set_aspect('equal')
     # color limits
     cmin = cmin if cmin else np.min(stress)
@@ -70,7 +73,8 @@ def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100,
     plt.xlim(xbounds[0], xbounds[1])
     plt.ylim(ybounds[0], ybounds[1])
     plt.title(f'Python bjsfm Stress:\n {comp} dir stress')
-    plt.show()
+    if not ax:
+        plt.show()
 
 
 

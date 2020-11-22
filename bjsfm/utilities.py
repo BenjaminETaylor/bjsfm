@@ -1,0 +1,1 @@
+# TODO: add a function that calculates/finds characteristic distance
