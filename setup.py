@@ -10,7 +10,7 @@ README = (HERE / "README_pypi.rst").read_text()
 # This call to setup() does all the work
 setup(
     name="bjsfm",
-    version="0.2.1",
+    version="0.2.2",
     description="Bolted Joint Stress Field Model",
     long_description=README,
     long_description_content_type="text/x-rst",
@@ -19,7 +19,7 @@ setup(
     author_email="benjaminearltaylor@gmail.com",
     license="MIT",
     classifiers=[
-        "Development Status :: 2 - Pre-Alpha",
+        "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: MIT License",
@@ -27,7 +27,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Topic :: Scientific/Engineering",
     ],
-    keywords='joints stress engineering',
+    keywords='joints stress engineering composites',
     packages=["bjsfm"],
     # packages=find_packages(exclude=("tests",)),
     # include_package_data=True,
