@@ -30,6 +30,17 @@ class TestMaxStrainQuasi(unittest.TestCase):
         self.assertAlmostEqual(y[2], 0.)
         self.assertAlmostEqual(y[3], -radius)
 
+    def test_strain_rotation(self):
+        bearing = [0, 0]
+        bypass = [100, 0, 0]
+        angles = [np.deg2rad(45.), np.deg2rad(-45.)]
+        for angle in angles:
+            rotated_stresses = rotate_plane_stress(self.analysis.stresses(bearing, bypass), angle=angle)
+            assert_array_almost_equal(
+                (self.analysis.a_inv @ (rotated_stresses * self.analysis.t).T).T,
+                self.analysis._rotate_strains(self.analysis.strains(bearing, bypass), angle=angle),
+            )
+
     def test_0_bearing_0_angle(self):
         bearing = [0, 0]
         p, theta = self.analysis.bearing_angle(bearing)

@@ -396,21 +396,21 @@ class MaxStrain(Analysis):
         Parameters
         ----------
         strains : ndarray
-            2D nx3 array of [:math: `\epsilon_x, \epsilon_y, \gamma_{xy}`] in-plane strains
+            2D nx3 array of [:math: `\epsilon_x, \epsilon_y, \epsilon_{xy}`] in-plane strains
         angle : float, default 0.
             angle measured counter-clockwise from positive x-axis (radians)
 
         Returns
         -------
         ndarray
-            2D nx3 array of [:math: `\epsilon_x', \epsilon_y', \gamma_{xy}'`] rotated stresses
+            2D nx3 array of [:math: `\epsilon_x', \epsilon_y', \epsilon_{xy}'`] rotated stresses
 
         """
         c = np.cos(angle)
         s = np.sin(angle)
         rotation_matrix = np.array([
-            [c**2, s**2, 2*s*c],
-            [s**2, c**2, -2*s*c],
+            [c**2, s**2, s*c],
+            [s**2, c**2, -s*c],
             [-2*s*c, 2*s*c, c**2 - s**2]
         ])
         strains = rotation_matrix @ strains.T
