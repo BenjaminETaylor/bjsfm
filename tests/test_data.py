@@ -63,7 +63,7 @@ G_SOFT = 1/(SOFT_INV[2, 2]*SOFT_THICK)
 # Hexcel 8552 IM7 Unidirectional
 # ref: https://www.wichita.edu/research/NIAR/Documents/NCP-RP-2009-028-Rev-B-HEXCEL-8552-IM7-Uni-SAR-4-16-2019.pdf
 # mean values (minimum of ETW, RTD and CTD where available)
-QUASI_SBS = 6.99e3/G_QUASI
+SHEAR_STRN = 16.56e3/0.68e6
 QUASI_UNT = 99.35e3/E_QUASI
 QUASI_UNC = 57.68e3/E_QUASI
 
