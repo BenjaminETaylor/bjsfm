@@ -1,4 +1,5 @@
 import unittest
+from numpy.testing import assert_array_almost_equal
 from bjsfm.lekhnitskii import UnloadedHole, LoadedHole
 from tests.test_data import *
 from tests.fortran import lekhnitskii_f as bjsfm
@@ -247,6 +248,12 @@ class UnLoadedHoleTests(HoleTests):
 
 
 class LoadedHoleTests(HoleTests):
+
+    def test_alphas_betas(self):
+        p = 100.
+        loaded_hole = LoadedHole(p, DIAMETER, QUASI_THICK, QUASI_INV)
+        assert_array_almost_equal(loaded_hole.X_DIR_COEFFICIENTS, loaded_hole._x_dir_fourier_coefficients())
+        assert_array_almost_equal(loaded_hole.Y_DIR_COEFFICIENTS, loaded_hole._y_dir_fourier_coefficients())
 
     def test_quasi_at_0_degrees(self):
         f_stress, p_stress = self.loaded_test_case(

@@ -672,7 +672,7 @@ class LoadedHole(Hole):
         Parameters
         ----------
         sample_rate : int, default 100000
-            used to tune the fast fourier transform (FFT) algorithm for accuracy
+            used to tune accuracy of the fast fourier transform (FFT) algorithm
 
         Returns
         -------
@@ -687,19 +687,21 @@ class LoadedHole(Hole):
             Parameters
             ----------
             thetas : 1D ndarray
-                angles
+                angles (radians)
 
             Returns
             -------
             ndarray
                 array of x-direction force terms for each angle in thetas
             """
-            new_array = np.zeros(len(thetas))
-            for i, angle in enumerate(thetas):
-                if -np.pi / 2 <= angle <= np.pi / 2:
-                    # x-direction component of cosine load distribution
-                    new_array[i] = np.cos(angle) ** 2
-            return new_array
+            bounds = [
+                thetas < -np.pi/2,
+                np.logical_and(-np.pi/2 <= thetas, thetas <= np.pi/2),
+                thetas > np.pi/2
+            ]
+            # x-direction component of cosine load distribution
+            values = [0., np.cos(thetas)**2, 0.]
+            return np.select(bounds, values)
 
         # return all coefficients except the first one (Ao)
         return fs.fourier_series_coefficients(brg_load_x_component, 2 * np.pi, N, sample_rate=sample_rate)[1:]
@@ -713,7 +715,7 @@ class LoadedHole(Hole):
         Parameters
         ----------
         sample_rate : int, default 100000
-            used to tune the fast fourier transform (FFT) algorithm for accuracy
+            used to tune accuracy of the fast fourier transform (FFT) algorithm
 
         Returns
         -------
@@ -735,14 +737,16 @@ class LoadedHole(Hole):
             ndarray
                 array of y-direction force terms for each angle in thetas
             """
-            new_array = np.zeros(len(thetas))
-            for i, angle in enumerate(thetas):
-                if -np.pi / 2 <= angle <= np.pi / 2:
-                    # y-direction component of cosine load distribution
-                    new_array[i] = np.cos(angle) * np.sin(angle)
-            return new_array
+            bounds = [
+                thetas < -np.pi/2,
+                np.logical_and(-np.pi/2 <= thetas, thetas <= np.pi/2),
+                thetas > np.pi/2
+            ]
+            # y-direction component of cosine load distribution
+            values = [0.,  np.cos(thetas)*np.sin(thetas), 0.]
+            return np.select(bounds, values)
 
-        # return all coefficients except the first one (Ao)
+        # return all coefficients except the first one (Bo)
         return fs.fourier_series_coefficients(brg_load_y_component, 2 * np.pi, N, sample_rate=sample_rate)[1:]
 
     def alphas(self):
