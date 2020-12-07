@@ -669,6 +669,12 @@ class LoadedHole(Hole):
         This function calculates the fourier series coefficients for the x-direction components of a cosine bearing
         load distribution centered on the positive x-axis.
 
+        Notes
+        -----
+        Exact solution:
+
+        .. math:: \frac{-2 P_x sin(\pi m/2)}{\pi h m(m^2-4)}
+
         Parameters
         ----------
         sample_rate : int, default 100000
@@ -712,6 +718,12 @@ class LoadedHole(Hole):
         This function calculates the fourier series coefficients for the y-direction components of a cosine bearing
         load distribution centered on the positive x-axis.
 
+        Notes
+        -----
+        Exact solution:
+
+        .. math:: \frac{P_x sin(\pi m/2)}{\pi h(m^2-4)}
+
         Parameters
         ----------
         sample_rate : int, default 100000
@@ -725,7 +737,7 @@ class LoadedHole(Hole):
         N = self.FOURIER_TERMS
 
         def brg_load_y_component(thetas):
-            """Y-direction components of a cosine load distribution centered at positive x-axis
+            r"""Y-direction components of a cosine load distribution centered at positive x-axis
 
             Parameters
             ----------
