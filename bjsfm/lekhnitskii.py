@@ -722,7 +722,7 @@ class LoadedHole(Hole):
         -----
         Exact solution:
 
-        .. math:: \frac{P_x sin(\pi m/2)}{\pi h(m^2-4)}
+        .. math:: \frac{i P_x sin(\pi m/2)}{\pi h(m^2-4)}
 
         Parameters
         ----------
