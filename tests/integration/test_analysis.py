@@ -13,7 +13,7 @@ class TestMaxStrainQuasi(unittest.TestCase):
             DIAMETER,
             et0=QUASI_UNT, et90=QUASI_UNT, et45=QUASI_UNT, etn45=QUASI_UNT,
             ec0=QUASI_UNC, ec90=QUASI_UNC, ec45=QUASI_UNC, ecn45=QUASI_UNC,
-            es0=QUASI_SBS, es90=QUASI_SBS, es45=QUASI_SBS, esn45=QUASI_SBS,
+            es0=SHEAR_STRN, es90=SHEAR_STRN, es45=SHEAR_STRN, esn45=SHEAR_STRN,
         )
 
     def test_xy_points(self):
@@ -122,10 +122,10 @@ class TestMaxStrainQuasi(unittest.TestCase):
         e45, en45, es45 = QUASI_INV @ np.array([s45, sn45, ss45])*QUASI_THICK
         self.assertAlmostEqual(margins[1, 0], QUASI_UNT/e0 - 1)
         self.assertAlmostEqual(margins[1, 1], -QUASI_UNC/e90 - 1)
-        self.assertAlmostEqual(margins[1, 2], QUASI_SBS/abs(es0) - 1)
+        self.assertAlmostEqual(margins[1, 2], SHEAR_STRN/abs(es0) - 1)
         self.assertAlmostEqual(margins[1, 3], QUASI_UNT/e45 - 1)
         self.assertAlmostEqual(margins[1, 4], QUASI_UNT/en45 - 1)
-        self.assertAlmostEqual(margins[1, 5], QUASI_SBS/abs(es45) - 1)
+        self.assertAlmostEqual(margins[1, 5], SHEAR_STRN/abs(es45) - 1)
 
 
 if __name__ == '__main__':

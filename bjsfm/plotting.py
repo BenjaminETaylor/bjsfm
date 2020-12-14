@@ -37,6 +37,8 @@ def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100, axes=None,
         maximum value for colormap
 
     """
+    # TODO: change so 'comp' input is {'x','y','xy'} and internally convert to {0, 1, 2} where necessary
+    convert_comp = {0: 'x', 1: 'y', 2: 'xy'}
     radius = lk_1.r
 
     xbounds = xbounds if xbounds else [-6*radius, 6*radius]
@@ -54,7 +56,7 @@ def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100, axes=None,
 
     stress = lk_1.stress(x.flatten(), y.flatten())[:, comp]
     if lk_2:
-        assert lk_1.r == lk_2.r, "Cannot plot plates with different radii."
+        assert lk_1.r == lk_2.r, "Cannot plot plates with different hole diameters."
         stress_2 = lk_2.stress(x.flatten(), y.flatten())[:, comp]
         stress += stress_2
 
@@ -74,7 +76,7 @@ def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100, axes=None,
     # graph limits
     plt.xlim(xbounds[0], xbounds[1])
     plt.ylim(ybounds[0], ybounds[1])
-    plt.title(f'Python bjsfm Stress:\n {comp} dir stress')
+    plt.title(f'Python bjsfm Stress:\n {convert_comp[comp]} dir stress')
     if not axes:
         plt.show()
 
