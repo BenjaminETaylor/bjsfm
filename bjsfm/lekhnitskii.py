@@ -58,6 +58,35 @@ def rotate_plane_stress(stresses, angle=0.):
     return stresses.T
 
 
+def rotate_strains(strains, angle=0.):
+    r"""Rotates the strain components by given angle
+
+    The rotation angle is positive counter-clockwise from the positive x-axis in the cartesian xy-plane.
+
+    Parameters
+    ----------
+    strains : ndarray
+        2D nx3 array of [:math: `\epsilon_x, \epsilon_y, \epsilon_{xy}`] in-plane strains
+    angle : float, default 0.
+        angle measured counter-clockwise from positive x-axis (radians)
+
+    Returns
+    -------
+    ndarray
+        2D nx3 array of [:math: `\epsilon_x', \epsilon_y', \epsilon_{xy}'`] rotated stresses
+
+    """
+    c = np.cos(angle)
+    s = np.sin(angle)
+    rotation_matrix = np.array([
+        [c**2, s**2, s*c],
+        [s**2, c**2, -s*c],
+        [-2*s*c, 2*s*c, c**2 - s**2]
+    ])
+    strains = rotation_matrix @ strains.T
+    return strains.T
+
+
 def rotate_material_matrix(a_inv, angle=0.):
     r"""Rotates the material compliance matrix by given angle
 

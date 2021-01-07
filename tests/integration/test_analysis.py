@@ -1,6 +1,6 @@
 import unittest
 from numpy.testing import assert_array_almost_equal
-from bjsfm.lekhnitskii import rotate_plane_stress, LoadedHole, UnloadedHole
+from bjsfm.lekhnitskii import rotate_plane_stress, rotate_strains, LoadedHole, UnloadedHole
 from bjsfm.analysis import MaxStrain
 from tests.test_data import *
 
@@ -38,7 +38,7 @@ class TestMaxStrainQuasi(unittest.TestCase):
             rotated_stresses = rotate_plane_stress(self.analysis.stresses(bearing, bypass), angle=angle)
             assert_array_almost_equal(
                 (self.analysis.a_inv @ (rotated_stresses * self.analysis.t).T).T,
-                self.analysis._rotate_strains(self.analysis.strains(bearing, bypass), angle=angle),
+                rotate_strains(self.analysis.strains(bearing, bypass), angle=angle),
             )
 
     def test_0_bearing_0_angle(self):

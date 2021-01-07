@@ -387,35 +387,6 @@ class MaxStrain(Analysis):
                 margins[:, 2] = es/xy_strains - 1
         return margins
 
-    @staticmethod
-    def _rotate_strains(strains, angle=0.):
-        r"""Rotates the strain components by given angle
-
-        The rotation angle is positive counter-clockwise from the positive x-axis in the cartesian xy-plane.
-
-        Parameters
-        ----------
-        strains : ndarray
-            2D nx3 array of [:math: `\epsilon_x, \epsilon_y, \epsilon_{xy}`] in-plane strains
-        angle : float, default 0.
-            angle measured counter-clockwise from positive x-axis (radians)
-
-        Returns
-        -------
-        ndarray
-            2D nx3 array of [:math: `\epsilon_x', \epsilon_y', \epsilon_{xy}'`] rotated stresses
-
-        """
-        c = np.cos(angle)
-        s = np.sin(angle)
-        rotation_matrix = np.array([
-            [c**2, s**2, s*c],
-            [s**2, c**2, -s*c],
-            [-2*s*c, 2*s*c, c**2 - s**2]
-        ])
-        strains = rotation_matrix @ strains.T
-        return strains.T
-
     def analyze(self, bearing, bypass, rc=0., num=100, w=0.):
         """ Analyze the joint for a set of loads
 
@@ -448,7 +419,7 @@ class MaxStrain(Analysis):
         margins[:, :3] = self._strain_margins(strains, et0=e_all['et0'], ec0=e_all['ec0'], et90=e_all['et90'],
                                               ec90=e_all['ec90'], es0=e_all['es0'], es90=e_all['es90'])
         # check 45/-45 direction
-        strains = self._rotate_strains(strains, angle=np.deg2rad(45))
+        strains = lk.rotate_strains(strains, angle=np.deg2rad(45))
         margins[:, 3:] = self._strain_margins(strains, et0=e_all['et45'], ec0=e_all['ec45'], et90=e_all['etn45'],
                                               ec90=e_all['ecn45'], es0=e_all['es45'], es90=e_all['esn45'])
         return margins
