@@ -23,7 +23,6 @@ import logging
 import abc
 import numpy as np
 import numpy.testing as npt
-import bjsfm.fourier_series as fs
 
 
 logger = logging.getLogger(__name__)
@@ -363,6 +362,14 @@ class Hole(abc.ABC):
         return xi_2s, sign_2s
 
     @abc.abstractmethod
+    def phi_1(self, z1):
+        raise NotImplementedError("You must implement this function.")
+
+    @abc.abstractmethod
+    def phi_2(self, z2):
+        raise NotImplementedError("You must implement this function.")
+
+    @abc.abstractmethod
     def phi_1_prime(self, z1):
         raise NotImplementedError("You must implement this function.")
 
@@ -412,6 +419,57 @@ class Hole(abc.ABC):
         sxy = -2.0 * np.real(mu1 * phi_1_prime + mu2 * phi_2_prime)
 
         return np.array([sx, sy, sxy]).T
+
+    def displacement(self, x, y):
+        r""" Calculates the displacement at (x, y) points in the plate
+
+        Notes
+        -----
+        This method implements Eq. 8.3 [2]_
+
+        .. math:: u=2Re[p_1\Phi_1(z_1)+p_2\Phi_2(z_2)]
+        .. math:: v=2Re[q_1\Phi_1(z_1)+q_2\Phi_2(z_2)]
+
+        Parameters
+        ----------
+        x : array_like
+            1D array x locations in the cartesian coordinate system
+        y : array_like
+            1D array y locations in the cartesian coordinate system
+
+        Returns
+        -------
+        ndarray
+            [[u0, v0], [u1, v1], ... , [un, vn]]
+            (n, 2) in-plane displacement components in the cartesian coordinate system
+
+        """
+        a11 = self.a[0, 0]
+        a12 = self.a[0, 1]
+        a16 = self.a[0, 2]
+        a22 = self.a[1, 1]
+        a26 = self.a[1, 2]
+        mu1 = self.mu1
+        mu2 = self.mu2
+
+        p1 = a11*mu1**2 + a12 - a16*mu1
+        p2 = a11*mu2**2 + a12 - a16*mu2
+        q1 = a12*mu1 + a22/mu1 - a26
+        q2 = a12*mu2 + a22/mu2 - a26
+
+        x = np.array(x, dtype=float)
+        y = np.array(y, dtype=float)
+
+        z1 = x + mu1 * y
+        z2 = x + mu2 * y
+
+        phi_1 = self.phi_1(z1)
+        phi_2 = self.phi_2(z2)
+
+        u = 2.0 * np.real(p1 * phi_1 + p2 * phi_2)
+        v = 2.0 * np.real(q1 * phi_1 + q2 * phi_2)
+
+        return np.array([u, v]).T
 
 
 class UnloadedHole(Hole):
@@ -487,6 +545,68 @@ class UnloadedHole(Hole):
         r = self.r
 
         return sxy * r / 2 - 1j * sx * r / 2
+
+    def phi_1(self, z1):
+        r"""Calculates the first stress function
+
+        Notes
+        -----
+        This method implements Eq. A.6 [1]_
+
+        .. math:: C_1=\frac{\beta_1-\mu_2\alpha_1}{\mu_1-\mu_2}
+        .. math:: \Phi_1=\frac{C_1}{\xi_1}
+
+        Parameters
+        ----------
+        z1 : ndarray
+            1D complex array first mapping parameter
+
+        Returns
+        -------
+        ndarray
+            1D complex array
+
+        """
+        mu1 = self.mu1
+        mu2 = self.mu2
+        alpha = self.alpha()
+        beta = self.beta()
+        xi_1, sign_1 = self.xi_1(z1)
+
+        C1 = (beta - mu2 * alpha) / (mu1 - mu2)
+
+        return C1 / xi_1
+
+    def phi_2(self, z2):
+        r"""Calculates the second stress function
+
+        Notes
+        -----
+        This method implements Eq. A.6 [1]_
+
+        .. math:: C_2=-\frac{\beta_1-\mu_1\alpha_1}{\mu_1-\mu_2}
+        .. math:: \Phi_2=\frac{C_2}{\xi_2}
+
+        Parameters
+        ----------
+        z2 : ndarray
+            1D complex array second mapping parameter
+
+        Returns
+        -------
+        ndarray
+            1D complex array
+
+        """
+        mu1 = self.mu1
+        mu2 = self.mu2
+        alpha = self.alpha()
+        beta = self.beta()
+        xi_2, sign_2 = self.xi_2(z2)
+
+        C2 = -(beta - mu1 * alpha) / (mu1 - mu2)
+
+        return C2 / xi_2
 
     def phi_1_prime(self, z1):
         r"""Calculates derivative of the first stress function
@@ -638,7 +758,7 @@ class LoadedHole(Hole):
         self.theta = theta
         self.A, self.A_bar, self.B, self.B_bar = self.equilibrium_constants()
 
-    def alphas(self):
+    def alpha(self):
         r"""Fourier series coefficients modified for use in stress function equations
 
         Notes
@@ -663,14 +783,14 @@ class LoadedHole(Hole):
         # modification from Eq. 37.2 [2]_
         mod = -1/(h*np.pi)
 
-        alphas = np.zeros(N)
-        alphas[:2] = [p*4/(6*np.pi)*mod, p/8*mod]
-        alphas[2:] = -2*p*np.sin(np.pi*m/2)/(np.pi*m*(m**2 - 4))*mod
+        alpha = np.zeros(N)
+        alpha[:2] = [p*4/(6*np.pi)*mod, p/8*mod]
+        alpha[2:] = -2*p*np.sin(np.pi*m/2)/(np.pi*m*(m**2 - 4))*mod
 
         # (in Ref. 2 Eq. 37.2, alpha is associated with the y-direction. Can someone explain?)
-        return alphas
+        return alpha
 
-    def betas(self):
+    def beta(self):
         r"""Fourier series coefficients modified for use in stress function equations
 
         Notes
@@ -697,12 +817,12 @@ class LoadedHole(Hole):
         mod2 = 4 / (np.pi*2**2*h)
         mod = 4 / (np.pi*m**2*h)
 
-        betas = np.zeros(N, dtype=complex)
-        betas[:2] = [-p*1j/(3*np.pi)*mod1, -1j*p/8*mod2]
-        betas[2:] = 1j*p*np.sin(np.pi*m/2)/(np.pi*(m**2 - 4))*mod
+        beta = np.zeros(N, dtype=complex)
+        beta[:2] = [-p*1j/(3*np.pi)*mod1, -1j*p/8*mod2]
+        beta[2:] = 1j*p*np.sin(np.pi*m/2)/(np.pi*(m**2 - 4))*mod
 
         # (in Ref. 2 Eq. 37.2, beta is associated with the x-direction. Can someone explain?)
-        return betas
+        return beta
 
     def equilibrium_constants(self):
         """Solve for constants of equilibrium
@@ -743,6 +863,76 @@ class LoadedHole(Hole):
         A1, A2, B1, B2 = np.dot(np.linalg.inv(mu_mat), load_vec)
         return A1, A2, B1, B2
 
+    def phi_1(self, z1):
+        r"""Calculates the first stress function
+
+        Notes
+        -----
+        This method implements [Eq. 31, Ref. 4]
+
+        .. math:: C_m=\frac{\beta_m-\mu_2\alpha_m}{\mu_1-\mu_2}
+        .. math:: \Phi_1=A\ln{\xi_1}+\sum_{m=1}^{\infty}\frac{C_m}{\xi_1^m}
+
+        Parameters
+        ----------
+        z1 : ndarray
+            1D complex array first mapping parameter
+
+        Returns
+        -------
+        ndarray
+            1D complex array
+
+        """
+        mu1 = self.mu1
+        mu2 = self.mu2
+        A = self.A + 1j * self.A_bar
+        N = self.FOURIER_TERMS
+        xi_1, sign_1 = self.xi_1(z1)
+
+        m = np.arange(1, N + 1)
+        alpha = self.alpha()
+        beta = self.beta()
+
+        # return results for each point in xi_1
+        return np.array([(A*np.log(xi_1[i]) + np.sum((beta - mu2 * alpha) / (mu1 - mu2) / xi_1[i] ** m))
+                         for i in range(len(xi_1))])
+
+    def phi_2(self, z2):
+        r"""Calculates the second stress function
+
+        Notes
+        -----
+        This method implements [Eq. 37.6, Ref. 2]
+
+        .. math:: C_m=\frac{\beta_m-\mu_1\alpha_m}{\mu_1-\mu_2}
+        .. math:: \Phi_2=B\ln{\xi_2}-\sum_{m=1}^{\infty}\frac{m C_m}{\xi_2^m}
+
+        Parameters
+        ----------
+        z2 : ndarray
+            1D complex array second mapping parameter
+
+        Returns
+        -------
+        ndarray
+            1D complex array
+
+        """
+        mu1 = self.mu1
+        mu2 = self.mu2
+        B = self.B + 1j * self.B_bar
+        N = self.FOURIER_TERMS
+        xi_2, sign_2 = self.xi_2(z2)
+
+        m = np.arange(1, N + 1)
+        alpha = self.alpha()
+        beta = self.beta()
+
+        # return results for each point in xi_2
+        return np.array([(B*np.log(xi_2[i]) - np.sum((beta - mu1 * alpha) / (mu1 - mu2) / xi_2[i] ** m))
+                         for i in range(len(xi_2))])
+
     def phi_1_prime(self, z1):
         r"""Calculates derivative of the first stress function
 
@@ -752,7 +942,7 @@ class LoadedHole(Hole):
 
         .. math:: C_m=\frac{\beta_m-\mu_2\alpha_m}{\mu_1-\mu_2}
         .. math:: \eta_1=\pm\sqrt{z_1^2-a^2-\mu_1^2b^2}
-        .. math:: \Phi_1'=-\frac{1}{\eta_1}(A-\sum_{m=1}^{\infty}\frac{C_m}{\xi_1^m})
+        .. math:: \Phi_1'=-\frac{1}{\eta_1}(A-\sum_{m=1}^{\infty}\frac{m C_m}{\xi_1^m})
 
         Parameters
         ----------
@@ -776,14 +966,15 @@ class LoadedHole(Hole):
         eta_1 = sign_1 * np.sqrt(z1 * z1 - a * a - b * b * mu1 * mu1)
 
         m = np.arange(1, N + 1)
-        alphas = self.alphas()
-        betas = self.betas()
+        alpha = self.alpha()
+        beta = self.beta()
 
-        return np.array([1 / eta_1[i] * (A - np.sum(m * (betas - mu2 * alphas) / (mu1 - mu2) / xi_1[i] ** m))
+        # return results for each point in xi_1
+        return np.array([1 / eta_1[i] * (A - np.sum(m * (beta - mu2 * alpha) / (mu1 - mu2) / xi_1[i] ** m))
                         for i in range(len(xi_1))])
 
     def phi_2_prime(self, z2):
-        r"""Calculates derivative of the first stress function
+        r"""Calculates derivative of the second stress function
 
         Notes
         -----
@@ -791,7 +982,7 @@ class LoadedHole(Hole):
 
         .. math:: C_m=\frac{\beta_m-\mu_1\alpha_m}{\mu_1-\mu_2}
         .. math:: \eta_2=\pm\sqrt{z_2^2-a^2-\mu_2^2b^2}
-        .. math:: \Phi_2'=-\frac{1}{\eta_2}(B+\sum_{m=1}^{\infty}\frac{C_m}{\xi_2^m})
+        .. math:: \Phi_2'=-\frac{1}{\eta_2}(B+\sum_{m=1}^{\infty}\frac{m C_m}{\xi_2^m})
 
         Parameters
         ----------
@@ -815,14 +1006,15 @@ class LoadedHole(Hole):
         eta_2 = sign_2 * np.sqrt(z2 * z2 - a * a - b * b * mu2 * mu2)
 
         m = np.arange(1, N + 1)
-        alphas = self.alphas()
-        betas = self.betas()
+        alpha = self.alpha()
+        beta = self.beta()
 
-        return np.array([1 / eta_2[i] * (B + np.sum(m * (betas - mu1 * alphas) / (mu1 - mu2) / xi_2[i] ** m))
+        # return results for each point in xi_2
+        return np.array([1 / eta_2[i] * (B + np.sum(m * (beta - mu1 * alpha) / (mu1 - mu2) / xi_2[i] ** m))
                          for i in range(len(xi_2))])
 
-    def stress(self, x, y):
-        r""" Calculates the stress at (x, y) points in the plate
+    def _rotate_points(self, x, y):
+        """(Private method) Rotates points to account for bearing angle
 
         Parameters
         ----------
@@ -833,9 +1025,10 @@ class LoadedHole(Hole):
 
         Returns
         -------
-        ndarray
-            [[sx0, sy0, sxy0], [sx1, sy1, sxy1], ... , [sxn, syn, sxyn]]
-            (n, 3) in-plane stress components in the cartesian coordinate system
+        x' : ndarray
+            new x points
+        y' : ndarray
+            new y points
 
         """
         # rotation back to original coordinates
@@ -857,9 +1050,58 @@ class LoadedHole(Hole):
         x = r * np.cos(angles)
         y = r * np.sin(angles)
 
-        # calculate stresses and rotate
+        return x, y
+
+    def stress(self, x, y):
+        r""" Calculates the stress at (x, y) points in the plate
+
+        Parameters
+        ----------
+        x : array_like
+            1D array x locations in the cartesian coordinate system
+        y : array_like
+            1D array y locations in the cartesian coordinate system
+
+        Returns
+        -------
+        ndarray
+            [[sx0, sy0, sxy0], [sx1, sy1, sxy1], ... , [sxn, syn, sxyn]]
+            (n, 3) in-plane stress components in the cartesian coordinate system
+
+        """
+        # rotate points to account for bearing angle
+        x, y = self._rotate_points(x, y)
+
+        # calculate stresses and rotate back
         stresses = super().stress(x, y)
-        return rotate_plane_stress(stresses, angle=rotation)
+        return rotate_plane_stress(stresses, angle=-self.theta)
+
+    def displacement(self, x, y):
+        r""" Calculates the displacement at (x, y) points in the plate
+
+        Notes
+        -----
+        This method implements Eq. 8.3 [2]_
+
+        .. math:: u=2Re[p_1\Phi_1(z_1)+p_2\Phi_2(z_2)]
+        .. math:: v=2Re[q_1\Phi_1(z_1)+q_2\Phi_2(z_2)]
+
+        Parameters
+        ----------
+        x : array_like
+            1D array x locations in the cartesian coordinate system
+        y : array_like
+            1D array y locations in the cartesian coordinate system
+
+        Returns
+        -------
+        ndarray
+            [[u0, v0], [u1, v1], ... , [un, vn]]
+            (n, 2) in-plane displacement components in the cartesian coordinate system
+
+        """
+        x, y = self._rotate_points(x, y)
+        return super().displacement(x, y)
 
 
 

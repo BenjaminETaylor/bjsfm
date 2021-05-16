@@ -58,8 +58,10 @@ class HoleTests(unittest.TestCase):
     SX_DELTA = 0.1
     SY_DELTA = 0.1
     SXY_DELTA = 0.1
+    U_DELTA = 1.e-4
+    V_DELTA = 1.e-4
 
-    def _test_at_points(self, python_stresses, fortran_stresses, step=0.):
+    def _test_at_points(self, python_stresses, fortran_stresses, python_displacements, fortran_displacements, step=0.):
         num_loops = len(X_POINTS)//2 if step > 0. else len(X_POINTS)
         for i in range(num_loops):
             # compare x-dir stress at hole boundary
@@ -79,6 +81,18 @@ class HoleTests(unittest.TestCase):
                 python_stresses[i][2],
                 fortran_stresses[2][0][i],
                 delta=self.SXY_DELTA
+            )
+            # compare x displacement at hole boundary
+            self.assertAlmostEqual(
+                python_displacements[i][0],
+                fortran_displacements[0][0][i],
+                delta=self.U_DELTA
+            )
+            # compare y displacement at hole boundary
+            self.assertAlmostEqual(
+                python_displacements[i][1],
+                fortran_displacements[1][0][i],
+                delta=self.V_DELTA
             )
             if step > 0. and len(python_stresses) == 2*len(X_POINTS):
                 py_step_index = i+len(X_POINTS)//2
@@ -100,10 +114,24 @@ class HoleTests(unittest.TestCase):
                     fortran_stresses[2][1][i],
                     delta=self.SXY_DELTA
                 )
+                # compare x displacement at step distance
+                self.assertAlmostEqual(
+                    python_displacements[py_step_index][0],
+                    fortran_displacements[0][1][i],
+                    delta=self.U_DELTA
+                )
+                # compare y displacement at step distance
+                self.assertAlmostEqual(
+                    python_displacements[py_step_index][1],
+                    fortran_displacements[1][1][i],
+                    delta=self.V_DELTA
+                )
 
     @staticmethod
     def unloaded_test_case(a_inv, h, d, step, x_pnts, y_pnts, nx=0., ny=0., nxy=0.):
         fx_stress = fy_stress = fpxy_stress = fnxy_stress = np.zeros((3, 2, len(x_pnts) // 2))
+        fx_u = fy_u = fpxy_u = fnxy_u = np.zeros((2, len(x_pnts) // 2))
+        fx_v = fy_v = fpxy_v = fnxy_v = np.zeros((2, len(x_pnts) // 2))
         if nx:
             fx_stress, fx_u, fx_v = bjsfm.unloded(nx / h, d, a_inv, 0., step, len(x_pnts) // 2)
         if ny:
@@ -112,145 +140,149 @@ class HoleTests(unittest.TestCase):
             fpxy_stress, fpxy_u, fpxy_v = bjsfm.unloded(nxy/h, d, a_inv, 45, step, len(x_pnts)//2)
             fnxy_stress, fnxy_u, fnxy_v = bjsfm.unloded(-nxy/h, d, a_inv, -45, step, len(x_pnts)//2)
         f_stress = fx_stress + fy_stress + fpxy_stress + fnxy_stress
+        f_u = fx_u + fy_u + fpxy_u + fnxy_u
+        f_v = fx_v + fy_v + fpxy_v + fnxy_v
         p_func = UnloadedHole([nx, ny, nxy], d, h, a_inv)
         p_stress = p_func.stress(x_pnts, y_pnts)
-        return f_stress, p_stress
+        p_disp = p_func.displacement(x_pnts, y_pnts)
+        return f_stress, p_stress, np.array([f_u, f_v]), p_disp
 
     @staticmethod
     def loaded_test_case(a_inv, h, d, step, x_pnts, y_pnts, p, alpha=0.):
         p_func = LoadedHole(p, d, h, a_inv, theta=np.deg2rad(alpha))
         p_stress = p_func.stress(x_pnts, y_pnts)
+        p_disp = p_func.displacement(x_pnts, y_pnts)
         f_stress, f_u, f_v = bjsfm.loaded(4*p/h, d, a_inv, alpha, step, len(x_pnts)//2)
-        return f_stress, p_stress
+        return f_stress, p_stress, np.array([f_u, f_v]), p_disp
 
 
 class UnLoadedHoleTests(HoleTests):
 
     def test_quasi_with_only_Nx(self):
-        f_stress, p_stress = self.unloaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.unloaded_test_case(
             QUASI_INV, QUASI_THICK,
             DIAMETER,
             STEP_DIST,
             X_POINTS, Y_POINTS,
             nx=100.,
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_quasi_with_only_Ny(self):
-        f_stress, p_stress = self.unloaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.unloaded_test_case(
             QUASI_INV, QUASI_THICK,
             DIAMETER,
             STEP_DIST,
             X_POINTS, Y_POINTS,
             ny=100.,
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_quasi_with_only_Nxy(self):
-        f_stress, p_stress = self.unloaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.unloaded_test_case(
             QUASI_INV, QUASI_THICK,
             DIAMETER,
             STEP_DIST,
             X_POINTS, Y_POINTS,
             nxy=100.,
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_soft_with_only_Nx(self):
-        f_stress, p_stress = self.unloaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.unloaded_test_case(
             SOFT_INV, SOFT_THICK,
             DIAMETER,
             STEP_DIST,
             X_POINTS, Y_POINTS,
             nx=100.,
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_soft_with_only_Ny(self):
-        f_stress, p_stress = self.unloaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.unloaded_test_case(
             SOFT_INV, SOFT_THICK,
             DIAMETER,
             STEP_DIST,
             X_POINTS, Y_POINTS,
             ny=100.,
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_soft_with_only_Nxy(self):
-        f_stress, p_stress = self.unloaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.unloaded_test_case(
             SOFT_INV, SOFT_THICK,
             DIAMETER,
             STEP_DIST,
             X_POINTS, Y_POINTS,
             nxy=100.,
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_hard_with_only_Nx(self):
-        f_stress, p_stress = self.unloaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.unloaded_test_case(
             HARD_INV, HARD_THICK,
             DIAMETER,
             STEP_DIST,
             X_POINTS, Y_POINTS,
             nx=100.,
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_hard_with_only_Ny(self):
-        f_stress, p_stress = self.unloaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.unloaded_test_case(
             HARD_INV, HARD_THICK,
             DIAMETER,
             STEP_DIST,
             X_POINTS, Y_POINTS,
             ny=100.,
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_hard_with_only_Nxy(self):
-        f_stress, p_stress = self.unloaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.unloaded_test_case(
             HARD_INV, HARD_THICK,
             DIAMETER,
             STEP_DIST,
             X_POINTS, Y_POINTS,
             nxy=100.,
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_quasi_with_Nx_Ny_Nxy(self):
-        f_stress, p_stress = self.unloaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.unloaded_test_case(
             QUASI_INV, QUASI_THICK,
             DIAMETER,
             STEP_DIST,
             X_POINTS, Y_POINTS,
             nx=100, ny=100., nxy=100.,
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_soft_with_Nx_Ny_Nxy(self):
-        f_stress, p_stress = self.unloaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.unloaded_test_case(
             SOFT_INV, SOFT_THICK,
             DIAMETER,
             STEP_DIST,
             X_POINTS, Y_POINTS,
             nx=100, ny=100., nxy=100.,
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_hard_with_Nx_Ny_Nxy(self):
-        f_stress, p_stress = self.unloaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.unloaded_test_case(
             HARD_INV, HARD_THICK,
             DIAMETER,
             STEP_DIST,
             X_POINTS, Y_POINTS,
             nx=100, ny=100., nxy=100.,
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
 
 class LoadedHoleTests(HoleTests):
 
     def test_quasi_at_0_degrees(self):
-        f_stress, p_stress = self.loaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.loaded_test_case(
             QUASI_INV, QUASI_THICK,
             DIAMETER,
             STEP_DIST,
@@ -258,10 +290,10 @@ class LoadedHoleTests(HoleTests):
             100.,
             alpha=0.
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_soft_at_0_degrees(self):
-        f_stress, p_stress = self.loaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.loaded_test_case(
             SOFT_INV, SOFT_THICK,
             DIAMETER,
             STEP_DIST,
@@ -269,10 +301,10 @@ class LoadedHoleTests(HoleTests):
             100.,
             alpha=0.
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_hard_at_0_degrees(self):
-        f_stress, p_stress = self.loaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.loaded_test_case(
             HARD_INV, HARD_THICK,
             DIAMETER,
             STEP_DIST,
@@ -280,10 +312,10 @@ class LoadedHoleTests(HoleTests):
             100.,
             alpha=0.
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_quasi_at_45_degrees(self):
-        f_stress, p_stress = self.loaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.loaded_test_case(
             QUASI_INV, QUASI_THICK,
             DIAMETER,
             STEP_DIST,
@@ -291,10 +323,10 @@ class LoadedHoleTests(HoleTests):
             100.,
             alpha=45.
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_quasi_at_90_degrees(self):
-        f_stress, p_stress = self.loaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.loaded_test_case(
             QUASI_INV, QUASI_THICK,
             DIAMETER,
             STEP_DIST,
@@ -302,10 +334,10 @@ class LoadedHoleTests(HoleTests):
             100.,
             alpha=90.
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_quasi_at_225_degrees(self):
-        f_stress, p_stress = self.loaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.loaded_test_case(
             QUASI_INV, QUASI_THICK,
             DIAMETER,
             STEP_DIST,
@@ -313,10 +345,10 @@ class LoadedHoleTests(HoleTests):
             100.,
             alpha=225.
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     def test_quasi_at_290_degrees(self):
-        f_stress, p_stress = self.loaded_test_case(
+        f_stress, p_stress, f_disp, p_disp = self.loaded_test_case(
             QUASI_INV, QUASI_THICK,
             DIAMETER,
             STEP_DIST,
@@ -324,11 +356,11 @@ class LoadedHoleTests(HoleTests):
             100.,
             alpha=290.
         )
-        self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+        self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
     # The below tests fail, fortran code seems to be incorrect
     # def test_soft_at_45_degrees(self):
-    #     f_stress, p_stress = self.loaded_test_case(
+    #     f_stress, p_stress, f_disp, p_disp = self.loaded_test_case(
     #         SOFT_INV, SOFT_THICK,
     #         DIAMETER,
     #         STEP_DIST,
@@ -336,10 +368,10 @@ class LoadedHoleTests(HoleTests):
     #         100.,
     #         alpha=45.
     #     )
-    #     self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+    #     self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
     #
     # def test_hard_at_45_degrees(self):
-    #     f_stress, p_stress = self.loaded_test_case(
+    #     f_stress, p_stress, f_disp, p_disp = self.loaded_test_case(
     #         HARD_INV, HARD_THICK,
     #         DIAMETER,
     #         STEP_DIST,
@@ -347,7 +379,7 @@ class LoadedHoleTests(HoleTests):
     #         100.,
     #         alpha=45.
     #     )
-    #     self._test_at_points(p_stress, f_stress, step=STEP_DIST)
+    #     self._test_at_points(p_stress, f_stress, p_disp, f_disp, step=STEP_DIST)
 
 
 if __name__ == '__main__':
