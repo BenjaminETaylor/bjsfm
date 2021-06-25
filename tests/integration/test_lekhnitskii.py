@@ -1,5 +1,5 @@
 import unittest
-from numpy.testing import assert_array_almost_equal
+# from numpy.testing import assert_array_almost_equal
 from bjsfm.lekhnitskii import UnloadedHole, LoadedHole
 from tests.test_data import *
 from tests.fortran import lekhnitskii_f as bjsfm

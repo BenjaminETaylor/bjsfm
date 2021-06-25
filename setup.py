@@ -34,6 +34,7 @@ setup(
     install_requires=[
         "numpy",
         "matplotlib",
+        "nptyping",
     ],
     python_requires='~=3.6',
     # entry_points={

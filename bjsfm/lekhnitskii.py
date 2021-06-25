@@ -21,14 +21,16 @@ References
 """
 import logging
 import abc
+from typing import Any
 import numpy as np
-import numpy.testing as npt
+import numpy.testing as nptest
+from nptyping import NDArray
 
 
 logger = logging.getLogger(__name__)
 
 
-def rotate_plane_stress(stresses, angle=0.):
+def rotate_plane_stress(stresses: NDArray[3, np.float], angle: float = 0.) -> NDArray[3, np.float]:
     r"""Rotates the stress components by given angle
 
     The rotation angle is positive counter-clockwise from the positive x-axis in the cartesian xy-plane.
@@ -57,7 +59,7 @@ def rotate_plane_stress(stresses, angle=0.):
     return stresses.T
 
 
-def rotate_strains(strains, angle=0.):
+def rotate_strains(strains: NDArray[3, np.float], angle: float = 0.) -> NDArray[3, float]:
     r"""Rotates the strain components by given angle
 
     The rotation angle is positive counter-clockwise from the positive x-axis in the cartesian xy-plane.
@@ -86,7 +88,7 @@ def rotate_strains(strains, angle=0.):
     return strains.T
 
 
-def rotate_material_matrix(a_inv, angle=0.):
+def rotate_material_matrix(a_inv: NDArray[(3, 3), np.float], angle: float = 0.) -> NDArray[(3, 3), float]:
     r"""Rotates the material compliance matrix by given angle
 
     The rotation angle is positive counter-clockwise from the positive x-axis in the cartesian xy-plane.
@@ -128,13 +130,13 @@ def rotate_material_matrix(a_inv, angle=0.):
             + a16*s**2*(3*c**2 - s**2) + a26*c**2*(c**2 - 3*s**2))
 
     # test invariants (Eq. 9.7 [2]_)
-    npt.assert_almost_equal(a11p + a22p + 2*a12p, a11 + a22 + 2*a12, decimal=4)
-    npt.assert_almost_equal(a66p - 4*a12p, a66 - 4*a12, decimal=4)
+    nptest.assert_almost_equal(a11p + a22p + 2*a12p, a11 + a22 + 2*a12, decimal=4)
+    nptest.assert_almost_equal(a66p - 4*a12p, a66 - 4*a12, decimal=4)
 
     return np.array([[a11p, a12p, a16p], [a12p, a22p, a26p], [a16p, a26p, a66p]])
 
 
-def rotate_complex_parameters(mu1, mu2, angle=0.):
+def rotate_complex_parameters(mu1: complex, mu2: complex, angle: float = 0.) -> tuple[complex, complex]:
     r"""Rotates the complex parameters by given angle
 
     The rotation angle is positive counter-clockwise from the positive x-axis in the cartesian xy-plane.
@@ -215,13 +217,13 @@ class Hole(abc.ABC):
 
     MAPPING_PRECISION = 0.0000001
 
-    def __init__(self, diameter, thickness, a_inv):
+    def __init__(self, diameter: float, thickness: float, a_inv: NDArray[(3, 3), float]) -> None:
         self.r = diameter/2.
         self.a = np.array(a_inv, dtype=float)
         self.h = thickness
         self.mu1, self.mu2, self.mu1_bar, self.mu2_bar = self.roots()
 
-    def roots(self):
+    def roots(self) -> tuple[complex, complex, complex, complex]:
         r""" Finds the roots to the characteristic equation
 
         Notes
@@ -265,7 +267,7 @@ class Hole(abc.ABC):
 
         return mu1, mu2, mu1_bar, mu2_bar
 
-    def xi_1(self, z1s):
+    def xi_1(self, z1s: NDArray[Any, complex]) -> tuple[NDArray[Any, complex], NDArray[Any, int]]:
         r"""Calculates the first mapping parameters
 
         Notes
@@ -313,7 +315,7 @@ class Hole(abc.ABC):
 
         return xi_1s, sign_1s
 
-    def xi_2(self, z2s):
+    def xi_2(self, z2s: NDArray[Any, complex]) -> tuple[NDArray[Any, complex], NDArray[Any, int]]:
         r""" Calculates the first mapping parameters
 
         Notes
@@ -362,22 +364,22 @@ class Hole(abc.ABC):
         return xi_2s, sign_2s
 
     @abc.abstractmethod
-    def phi_1(self, z1):
+    def phi_1(self, z1: NDArray[Any, complex]) -> NDArray[Any, complex]:
         raise NotImplementedError("You must implement this function.")
 
     @abc.abstractmethod
-    def phi_2(self, z2):
+    def phi_2(self, z2: NDArray[Any, complex]) -> NDArray[Any, complex]:
         raise NotImplementedError("You must implement this function.")
 
     @abc.abstractmethod
-    def phi_1_prime(self, z1):
+    def phi_1_prime(self, z1: NDArray[Any, complex]) -> NDArray[Any, complex]:
         raise NotImplementedError("You must implement this function.")
 
     @abc.abstractmethod
-    def phi_2_prime(self, z2):
+    def phi_2_prime(self, z2: NDArray[Any, complex]) -> NDArray[Any, complex]:
         raise NotImplementedError("You must implement this function.")
 
-    def stress(self, x, y):
+    def stress(self, x: NDArray[Any, float], y: NDArray[Any, float]) -> NDArray[(Any, 3), float]:
         r""" Calculates the stress at (x, y) points in the plate
 
         Notes
@@ -420,7 +422,7 @@ class Hole(abc.ABC):
 
         return np.array([sx, sy, sxy]).T
 
-    def displacement(self, x, y):
+    def displacement(self, x: NDArray[Any, float], y: NDArray[Any, float]) -> NDArray[(Any, 2), float]:
         r""" Calculates the displacement at (x, y) points in the plate
 
         Notes
@@ -496,11 +498,12 @@ class UnloadedHole(Hole):
 
     """
 
-    def __init__(self, loads, diameter, thickness, a_inv):
+    def __init__(self, loads: NDArray[3, float], diameter: float, thickness: float,
+                 a_inv: NDArray[(3, 3), float]) -> None:
         super().__init__(diameter, thickness, a_inv)
         self.applied_stress = np.array(loads, dtype=float) / self.h
 
-    def alpha(self):
+    def alpha(self) -> complex:
         r"""Calculates the alpha loading term for three components of applied stress at infinity
 
         Three components of stress are [:math:`\sigma_{x}^*, \sigma_{y}^*, \tau_{xy}^*`]
@@ -523,7 +526,7 @@ class UnloadedHole(Hole):
 
         return 1j * sxy * r / 2 - sy * r / 2
 
-    def beta(self):
+    def beta(self) -> complex:
         r"""Calculates the beta loading term for three components of applied stress at infinity
 
         Three components of stress are [:math:`\sigma_x^*, \sigma_y^*, \tau_{xy}^*`]
@@ -546,7 +549,7 @@ class UnloadedHole(Hole):
 
         return sxy * r / 2 - 1j * sx * r / 2
 
-    def phi_1(self, z1):
+    def phi_1(self, z1: NDArray[Any, complex]) -> NDArray[Any, complex]:
         r"""Calculates the first stress function
 
         Notes
@@ -577,7 +580,7 @@ class UnloadedHole(Hole):
 
         return C1 / xi_1
 
-    def phi_2(self, z2):
+    def phi_2(self, z2: NDArray[Any, complex]) -> NDArray[Any, complex]:
         r"""Calculates the second stress function
 
         Notes
@@ -608,7 +611,7 @@ class UnloadedHole(Hole):
 
         return C2 / xi_2
 
-    def phi_1_prime(self, z1):
+    def phi_1_prime(self, z1: NDArray[Any, complex]) -> NDArray[Any, complex]:
         r"""Calculates derivative of the first stress function
 
         Notes
@@ -645,7 +648,7 @@ class UnloadedHole(Hole):
 
         return -C1 / (xi_1 ** 2) * (1 + z1 / eta1) * kappa1
 
-    def phi_2_prime(self, z2):
+    def phi_2_prime(self, z2: NDArray[Any, complex]) -> NDArray[Any, complex]:
         r"""Calculates derivative of the second stress function
 
         Notes
@@ -682,7 +685,7 @@ class UnloadedHole(Hole):
 
         return -C2 / (xi_2 ** 2) * (1 + z2 / eta2) * kappa2
 
-    def stress(self, x, y):
+    def stress(self, x: NDArray[Any, float], y: NDArray[Any, float]) -> NDArray[(Any, 3), float]:
         r""" Calculates the stress at (x, y) points in the plate
 
         Parameters
@@ -751,14 +754,15 @@ class LoadedHole(Hole):
     """
     FOURIER_TERMS = 45  # number of fourier series terms [3]_
 
-    def __init__(self, load, diameter, thickness, a_inv, theta=0.):
+    def __init__(self, load: float, diameter: float, thickness: float,
+                 a_inv: NDArray[(3, 3), float], theta: float = 0.) -> None:
         a_inv = rotate_material_matrix(a_inv, angle=theta)
         super().__init__(diameter, thickness, a_inv)
         self.p = load
         self.theta = theta
         self.A, self.A_bar, self.B, self.B_bar = self.equilibrium_constants()
 
-    def alpha(self):
+    def alpha(self) -> NDArray[FOURIER_TERMS, complex]:
         r"""Fourier series coefficients modified for use in stress function equations
 
         Notes
@@ -790,14 +794,14 @@ class LoadedHole(Hole):
         # (in Ref. 2 Eq. 37.2, alpha is associated with the y-direction. Can someone explain?)
         return alpha
 
-    def beta(self):
+    def beta(self) -> NDArray[FOURIER_TERMS, complex]:
         r"""Fourier series coefficients modified for use in stress function equations
 
         Notes
         -----
         Exact solution:
 
-        .. math:: \frac{-P}{2\pi}\int_{-\pi/2}^{\pi/2} \cos \theta \sin \theta \left( \cos m*\theta - i \sin m*\theta \right) \,d\theta
+        .. math:: \frac{-P}{2\pi}\int_{-\pi/2}^{\pi/2}\cos\theta\sin\theta\left(\cos m*\theta - i \sin m*\theta\right)\,d\theta
         .. math:: = -\frac{i P sin(\pi m/2)}{\pi (m^2-4)}
 
         Modifications to the Fourier series coefficients are developed in Eq. 37.2 [2]_
@@ -810,21 +814,19 @@ class LoadedHole(Hole):
         h = self.h
         p = self.p
         N = self.FOURIER_TERMS
-        m = np.arange(3, N + 1)
+        m = np.arange(1, N + 1)
 
         # modification from Eq. 37.2 [2]_
-        mod1 = 4 / (np.pi*1**2*h)
-        mod2 = 4 / (np.pi*2**2*h)
         mod = 4 / (np.pi*m**2*h)
 
         beta = np.zeros(N, dtype=complex)
-        beta[:2] = [-p*1j/(3*np.pi)*mod1, -1j*p/8*mod2]
-        beta[2:] = 1j*p*np.sin(np.pi*m/2)/(np.pi*(m**2 - 4))*mod
+        beta[:2] = [-p*1j/(3*np.pi)*mod[0], -1j*p/8*mod[1]]
+        beta[2:] = 1j*p*np.sin(np.pi*m[2:]/2)/(np.pi*(m[2:]**2 - 4))*mod[2:]
 
         # (in Ref. 2 Eq. 37.2, beta is associated with the x-direction. Can someone explain?)
         return beta
 
-    def equilibrium_constants(self):
+    def equilibrium_constants(self) -> tuple[float, float, float, float]:
         """Solve for constants of equilibrium
 
         When the plate has loads applied that are not in equilibrium, the unbalanced loads are reacted at infinity.
@@ -863,7 +865,7 @@ class LoadedHole(Hole):
         A1, A2, B1, B2 = np.dot(np.linalg.inv(mu_mat), load_vec)
         return A1, A2, B1, B2
 
-    def phi_1(self, z1):
+    def phi_1(self, z1: NDArray[Any, complex]) -> NDArray[Any, complex]:
         r"""Calculates the first stress function
 
         Notes
@@ -898,7 +900,7 @@ class LoadedHole(Hole):
         return np.array([(A*np.log(xi_1[i]) + np.sum((beta - mu2 * alpha) / (mu1 - mu2) / xi_1[i] ** m))
                          for i in range(len(xi_1))])
 
-    def phi_2(self, z2):
+    def phi_2(self, z2: NDArray[Any, complex]) -> NDArray[Any, complex]:
         r"""Calculates the second stress function
 
         Notes
@@ -933,7 +935,7 @@ class LoadedHole(Hole):
         return np.array([(B*np.log(xi_2[i]) - np.sum((beta - mu1 * alpha) / (mu1 - mu2) / xi_2[i] ** m))
                          for i in range(len(xi_2))])
 
-    def phi_1_prime(self, z1):
+    def phi_1_prime(self, z1: NDArray[Any, complex]) -> NDArray[Any, complex]:
         r"""Calculates derivative of the first stress function
 
         Notes
@@ -973,7 +975,7 @@ class LoadedHole(Hole):
         return np.array([1 / eta_1[i] * (A - np.sum(m * (beta - mu2 * alpha) / (mu1 - mu2) / xi_1[i] ** m))
                         for i in range(len(xi_1))])
 
-    def phi_2_prime(self, z2):
+    def phi_2_prime(self, z2: NDArray[Any, complex]) -> NDArray[Any, complex]:
         r"""Calculates derivative of the second stress function
 
         Notes
@@ -1013,7 +1015,8 @@ class LoadedHole(Hole):
         return np.array([1 / eta_2[i] * (B + np.sum(m * (beta - mu1 * alpha) / (mu1 - mu2) / xi_2[i] ** m))
                          for i in range(len(xi_2))])
 
-    def _rotate_points(self, x, y):
+    def _rotate_points(self, x: NDArray[Any, float], y: NDArray[Any, float])\
+            -> tuple[NDArray[Any, float], NDArray[Any, float]]:
         """(Private method) Rotates points to account for bearing angle
 
         Parameters
@@ -1052,7 +1055,7 @@ class LoadedHole(Hole):
 
         return x, y
 
-    def stress(self, x, y):
+    def stress(self, x: NDArray[Any, float], y: NDArray[Any, float]) -> NDArray[(Any, 3), float]:
         r""" Calculates the stress at (x, y) points in the plate
 
         Parameters
@@ -1076,7 +1079,7 @@ class LoadedHole(Hole):
         stresses = super().stress(x, y)
         return rotate_plane_stress(stresses, angle=-self.theta)
 
-    def displacement(self, x, y):
+    def displacement(self, x: NDArray[Any, float], y: NDArray[Any, float]) -> NDArray[(Any, 2), float]:
         r""" Calculates the displacement at (x, y) points in the plate
 
         Notes
@@ -1100,6 +1103,7 @@ class LoadedHole(Hole):
             (n, 2) in-plane displacement components in the cartesian coordinate system
 
         """
+        # rotate points to account for bearing angle
         x, y = self._rotate_points(x, y)
         return super().displacement(x, y)
 
