@@ -1,4 +1,6 @@
 import unittest
+
+import numpy as np
 from numpy.testing import assert_array_almost_equal
 from bjsfm.lekhnitskii import rotate_plane_stress, rotate_strains, LoadedHole, UnloadedHole
 from bjsfm.analysis import MaxStrain
@@ -11,9 +13,9 @@ class TestMaxStrainQuasi(unittest.TestCase):
         self.analysis = MaxStrain(
             QUASI, QUASI_THICK,
             DIAMETER,
-            et0=QUASI_UNT, et90=QUASI_UNT, et45=QUASI_UNT, etn45=QUASI_UNT,
-            ec0=QUASI_UNC, ec90=QUASI_UNC, ec45=QUASI_UNC, ecn45=QUASI_UNC,
-            es0=SHEAR_STRN, es90=SHEAR_STRN, es45=SHEAR_STRN, esn45=SHEAR_STRN,
+            et={0: QUASI_UNT, 90: QUASI_UNT, 45: QUASI_UNT, -45: QUASI_UNT},
+            ec={0: QUASI_UNC, 90: QUASI_UNC, 45: QUASI_UNC, -45: QUASI_UNC},
+            es={0: SHEAR_STRN, 90: SHEAR_STRN, 45: SHEAR_STRN, -45: SHEAR_STRN},
         )
 
     def test_xy_points(self):
@@ -33,7 +35,7 @@ class TestMaxStrainQuasi(unittest.TestCase):
     def test_strain_rotation(self):
         bearing = [0, 0]
         bypass = [100, 0, 0]
-        angles = [np.deg2rad(45.), np.deg2rad(-45.)]
+        angles = map(np.deg2rad, [0, 45, 90, -45, 60, -60])
         for angle in angles:
             rotated_stresses = rotate_plane_stress(self.analysis.stresses(bearing, bypass), angle=angle)
             assert_array_almost_equal(
@@ -110,24 +112,43 @@ class TestMaxStrainQuasi(unittest.TestCase):
         rc = 0.15
         num = 4
         bearing = [0, 0]
-        bypass = [100., 0., 0.]
+        bypass = [1000., 0., 0.]
         margins = self.analysis.analyze(bearing, bypass, rc=rc, num=num)
-        e0, e90, es0 = self.analysis.strains(bearing, bypass, rc=rc, num=num)[1]
-        s0, s90, ss0 = self.analysis.stresses(bearing, bypass, rc=rc, num=num)[1]
-        calc_strains = QUASI_INV @ np.array([s0, s90, ss0])*QUASI_THICK
-        self.assertAlmostEqual(e0, calc_strains[0])
-        self.assertAlmostEqual(e90, calc_strains[1])
-        self.assertAlmostEqual(es0, calc_strains[2])
-        s45, sn45, ss45 = rotate_plane_stress(np.array([s0, s90, ss0]), angle=np.deg2rad(45.))
-        e45, en45, es45 = QUASI_INV @ np.array([s45, sn45, ss45])*QUASI_THICK
-        self.assertAlmostEqual(margins[1, 0], QUASI_UNT/e0 - 1)
-        self.assertAlmostEqual(margins[1, 1], -QUASI_UNC/e90 - 1)
-        self.assertAlmostEqual(margins[1, 2], SHEAR_STRN/abs(es0) - 1)
-        self.assertAlmostEqual(margins[1, 3], QUASI_UNT/e45 - 1)
-        self.assertAlmostEqual(margins[1, 4], QUASI_UNT/en45 - 1)
-        self.assertAlmostEqual(margins[1, 5], SHEAR_STRN/abs(es45) - 1)
+        strains = self.analysis.strains(bearing, bypass, rc=rc, num=num)
+        compare_margins = np.empty((num, 2*len(self.analysis.et)))
+        with np.errstate(divide='ignore'):
+            for iangle, angle in enumerate(self.analysis.et):
+                rotated_strains = rotate_strains(strains, angle=np.deg2rad(angle))
+                # axial strains
+                x_strains = rotated_strains[:, 0]
+                compare_margins[:, iangle*2] = np.select(
+                    [x_strains > 0, x_strains < 0], [QUASI_UNT / x_strains - 1, -abs(QUASI_UNC) / x_strains - 1])
+                # shear strains
+                xy_strains = np.abs(rotated_strains[:, 2])
+                compare_margins[:, iangle*2+1] = abs(SHEAR_STRN) / xy_strains - 1
+        assert_array_almost_equal(margins, compare_margins)
 
 
 if __name__ == '__main__':
     unittest.main()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

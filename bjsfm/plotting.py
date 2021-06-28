@@ -1,9 +1,16 @@
+from typing import Union
 import numpy as np
 import matplotlib.pyplot as plt
+from bjsfm.lekhnitskii import LoadedHole, UnloadedHole
 
 
-def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100, axes=None,
-                xbounds=None, ybounds=None, cmap='jet', cmin=None, cmax=None):
+HoleObject = Union[LoadedHole, UnloadedHole]
+Component = Union['x', 'y', 'xy']
+
+
+def plot_stress(lk_1: HoleObject, lk_2: HoleObject = None, comp: Component = 'x', rnum: int = 100, tnum: int = 100,
+                axes: plt.axes = None, xbounds: tuple[float, float] = None, ybounds: tuple[float, float] = None,
+                cmap: str ='jet', cmin: float = None, cmax: float = None) -> None:
     """ Plots stresses
 
     Notes
@@ -17,17 +24,17 @@ def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100, axes=None,
         LoadedHole or UnloadedHole instance
     lk_2 : bjsfm.lekhnitskii.UnloadedHole or bjsfm.lekhnitskii.LoadedHole, optional
         LoadedHole or UnloadedHole instance
-    comp : {0, 1, 2}, default 0
+    comp : {'x', 'y', 'xy'}, default 'x'
         stress component
     rnum : int, default 100
         number of points to plot along radius
     tnum : int, default 100
         number of points to plot along circumference
-    ax : matplotlib.axes, optional
+    axes : matplotlib.axes, optional
         a custom axes to plot on
-    xbounds : tuple of int, optional
+    xbounds : tuple of float, optional
         (x0, x1) x-axis bounds, default=6*radius
-    ybounds : tuple of int, optional
+    ybounds : tuple of float, optional
         (y0, y1) y-axis bounds default=6*radius
     cmap : str, optional
         name of any colormap name from matplotlib.pyplot
@@ -37,8 +44,7 @@ def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100, axes=None,
         maximum value for colormap
 
     """
-    # TODO: change so 'comp' input is {'x','y','xy'} and internally convert to {0, 1, 2} where necessary
-    convert_comp = {0: 'x', 1: 'y', 2: 'xy'}
+    convert_comp = {'x': 0, 'y': 1, 'xy': 2}
     radius = lk_1.r
 
     xbounds = xbounds if xbounds else [-6*radius, 6*radius]
@@ -54,10 +60,10 @@ def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100, axes=None,
     y = np.array(radii) * np.sin(thetas)
     x.shape = y.shape = (tnum, rnum)
 
-    stress = lk_1.stress(x.flatten(), y.flatten())[:, comp]
+    stress = lk_1.stress(x.flatten(), y.flatten())[:, convert_comp[comp]]
     if lk_2:
         assert lk_1.r == lk_2.r, "Cannot plot plates with different hole diameters."
-        stress_2 = lk_2.stress(x.flatten(), y.flatten())[:, comp]
+        stress_2 = lk_2.stress(x.flatten(), y.flatten())[:, convert_comp[comp]]
         stress += stress_2
 
     stress.shape = (tnum, rnum)
@@ -76,7 +82,7 @@ def plot_stress(lk_1, lk_2=None, comp=0, rnum=100, tnum=100, axes=None,
     # graph limits
     plt.xlim(xbounds[0], xbounds[1])
     plt.ylim(ybounds[0], ybounds[1])
-    plt.title(f'Python bjsfm Stress:\n {convert_comp[comp]} dir stress')
+    plt.title(f'Python bjsfm Stress:\n {comp} dir stress')
     if not axes:
         plt.show()
 

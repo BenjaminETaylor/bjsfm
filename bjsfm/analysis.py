@@ -7,7 +7,10 @@ a third party CLPT package , the parent class `Analysis` can be used to extend t
 Tsai-Hill, etc.
 
 """
+from typing import Any, Union
 import numpy as np
+from matplotlib import pyplot as plt
+from nptyping import NDArray
 import bjsfm.lekhnitskii as lk
 from bjsfm.plotting import plot_stress
 
@@ -37,13 +40,13 @@ class Analysis:
 
     """
 
-    def __init__(self, a_matrix, thickness, diameter):
+    def __init__(self, a_matrix: NDArray[(3, 3), float], thickness: float, diameter: float) -> None:
         self.t = thickness
         self.r = diameter/2.
         self.a = np.array(a_matrix, dtype=float)
         self.a_inv = np.linalg.inv(self.a)
 
-    def _loaded(self, bearing):
+    def _loaded(self, bearing: NDArray[2, float]) -> lk.LoadedHole:
         """Lekhnitskii's loaded hole solution
 
         Parameters
@@ -63,7 +66,7 @@ class Analysis:
         p, theta = self.bearing_angle(bearing)
         return lk.LoadedHole(p, d, t, a_inv, theta=theta)
 
-    def _unloaded(self, bearing, bypass, w=0.):
+    def _unloaded(self, bearing: NDArray[2, float], bypass: NDArray[3, float], w: float = 0.) -> lk.UnloadedHole:
         """Lekhnitskii's unloaded hole solution
 
         Parameters
@@ -93,7 +96,7 @@ class Analysis:
             bypass += lk.rotate_plane_stress(np.array([p/(2*w)*sign, 0., 0.]), angle=-theta)
         return lk.UnloadedHole(bypass, d, t, a_inv)
 
-    def polar_points(self, rc=0., num=100):
+    def polar_points(self, rc: float = 0., num: int = 100) -> tuple[NDArray[Any, float], NDArray[Any, float]]:
         """Calculates r, theta points
 
         Parameters
@@ -113,7 +116,7 @@ class Analysis:
         theta = np.linspace(0, 2*np.pi, num=num, endpoint=False)
         return r, theta
 
-    def xy_points(self, rc=0., num=100):
+    def xy_points(self, rc: float = 0., num: int = 100) -> tuple[NDArray[Any, float], NDArray[Any, float]]:
         """Calculates x, y points
 
         Parameters
@@ -135,7 +138,7 @@ class Analysis:
         return x, y
 
     @staticmethod
-    def bearing_angle(bearing):
+    def bearing_angle(bearing: NDArray[2, float]) -> tuple[float, float]:
         """Calculates bearing load and angle
 
         Parameters
@@ -156,7 +159,8 @@ class Analysis:
         theta = theta*np.sign(bearing[1]) if bearing[1] else theta
         return p, theta
 
-    def stresses(self, bearing, bypass, rc=0., num=100, w=0.):
+    def stresses(self, bearing: NDArray[2, float], bypass: NDArray[3, float],
+                 rc: float = 0., num: int = 100, w: float = 0.) -> NDArray[(Any, 3), float]:
         """ Calculate stresses
 
         Parameters
@@ -186,7 +190,8 @@ class Analysis:
         brg_stress = brg.stress(x, y)
         return byp_stress + brg_stress
 
-    def strains(self, bearing, bypass, rc=0., num=100, w=0.):
+    def strains(self, bearing: NDArray[2, float], bypass: NDArray[3, float],
+                rc: float = 0., num: int = 100, w: float = 0.) -> NDArray[(Any, 3), float]:
         """ Calculate strains
 
         Parameters
@@ -213,8 +218,10 @@ class Analysis:
         strains = self.a_inv @ stresses.T*self.t
         return strains.T
 
-    def plot_stress(self, bearing, bypass, w=0., comp=0, rnum=100, tnum=100, axes=None,
-                xbounds=None, ybounds=None, cmap='jet', cmin=None, cmax=None):
+    def plot_stress(self, bearing: NDArray[2, float], bypass: NDArray[3, float], w: float = 0., comp: str = 'x',
+                    rnum: int = 100, tnum: int = 100, axes: plt.axes = None,
+                    xbounds: tuple[float, float] = None, ybounds: tuple[float, float] = None,
+                    cmap: str = 'jet', cmin: float = None, cmax: float = None) -> None:
         """ Plots stresses
 
         Notes
@@ -231,7 +238,7 @@ class Analysis:
         w : float, default 0.
             pitch or width in bearing load direction
             (set to 0. for infinite plate)
-        comp : {0, 1, 2}, default 0
+        comp : {'x', 'y', 'xy'}, default 'x'
             stress component
         rnum : int, default 100
             number of points to plot along radius
@@ -270,30 +277,15 @@ class MaxStrain(Analysis):
         hole diameter
     a_matrix : array_like
         2D 3x3 inverse A-matrix from CLPT
-    et0 : float
-        tension strain allowable in 0 deg direction
-    et90 : float
-        tension strain allowable in 90 deg direction
-    et45 : float
-        tension strain allowable in 45 deg direction
-    etn45 : float
-        tension strain allowable in -45 deg direction
-    ec0 : float
-        compression strain allowable in 0 deg direction
-    ec90 : float
-        compression strain allowable in 90 deg direction
-    ec45 : float
-        compression strain allowable in 45 deg direction
-    ecn45 : float
-        compression strain allowable in -45 deg direction
-    es0 : float
-        shear strain allowable in 0 deg direction
-    es90 : float
-        shear strain allowable in 90 deg direction
-    es45 : float
-        shear strain allowable in 45 deg direction
-    esn45 : float
-        shear strain allowable in -45 deg direction
+    et : dict, optional
+        tension strain allowables (one of `et`, `ec` or `es` must be specified to obtain results)
+        {<angle>: <value>, ...}
+    ec : dict, optional
+        compression strain allowables (one of `et`, `ec` or `es` must be specified to obtain results)
+        {<angle>: <value>, ...}
+    es : dict, optional
+        shear strain allowables (one of `et`, `ec` or `es` must be specified to obtain results)
+        {<angle>: <value>, ...}
 
     Attributes
     ----------
@@ -305,89 +297,120 @@ class MaxStrain(Analysis):
         2D 3x3 A-matrix from CLPT
     a_inv : ndarray
         2D 3x3 Inverse A-matrix from CLPT
-    et0 : float
-        plate tension strain allowable in 0 deg direction
-    et90 : float
-        plate tension strain allowable in 90 deg direction
-    et45 : float
-        plate tension strain allowable in 45 deg direction
-    etn45 : float
-        plate tension strain allowable in -45 deg direction
-    ec0 : float
-        plate compression strain allowable in 0 deg direction
-    ec90 : float
-        plate compression strain allowable in 90 deg direction
-    ec45 : float
-        plate compression strain allowable in 45 deg direction
-    ecn45 : float
-        plate compression strain allowable in -45 deg direction
-    es0 : float
-        plate shear strain allowable in 0 deg direction
-    es90 : float
-        plate shear strain allowable in 90 deg direction
-    es45 : float
-        plate shear strain allowable in 45 deg direction
-    esn45 : float
-        plate shear strain allowable in -45 deg direction
+    et : dict
+        tension strain allowables
+    ec : dict
+        compression strain allowables
+    es : dict
+        shear strain allowables
 
     """
 
-    def __init__(self, a_matrix, thickness, diameter, et0=None, et90=None, et45=None, etn45=None, ec0=None, ec90=None,
-                 ec45=None, ecn45=None, es0=None, es90=None, es45=None, esn45=None):
+    def __init__(self, a_matrix: NDArray[(3, 3), float], thickness: float, diameter: float,
+                 et: dict[int, float] = {}, ec: dict[int, float] = {}, es: dict[int, float] = {}) -> None:
         super(MaxStrain, self).__init__(a_matrix, thickness, diameter)
-        # TODO: convert to dictionary argument keyed off integers for each angle {0: [<et>, <ec>, <es>], ...}
-        self.e_allow = {'et0': et0, 'et90': et90, 'et45': et45, 'etn45': etn45, 'ec0': ec0, 'ec90': ec90,
-                        'ec45': ec45, 'ecn45': ecn45, 'es0': es0, 'es90': es90, 'es45': es45, 'esn45': esn45}
+        self.et, self.ec, self.es = self._equalize_dicts([et, ec, es])
 
     @staticmethod
-    def _strain_margins(strains, et0=None, ec0=None, et90=None, ec90=None, es0=None, es90=None):
+    def _equalize_dicts(dicts: list[dict]) -> list[dict]:
+        """This method makes sure all dictionaries ar the same size and contain the same keys
+
+        Notes
+        -----
+        Maintains original contents of each dictionary, fills empty slots with np.inf
+
+        Parameters
+        ----------
+        dicts : list of dict
+
+        Returns
+        -------
+        list of dictionaries that are equal in size and contain the same keys (without modifying original contents)
+
+        """
+        for d in dicts:
+            others = dicts.copy()
+            others.remove(d)
+            for od in others:
+                for key in d:
+                    if key not in od:
+                        od[key] = np.inf
+        return dicts
+
+    def _add_90_dirs(self, allowables: dict[str, Union[float]], angle: int = 0) -> dict[str, Union[float]]:
+        """This method adds allowables at 90 if they don't exist
+
+        Notes
+        -----
+        Expects dictionary arguments (et, ec, es) to be same size and have same keys
+
+        Parameters
+        ----------
+        allowables : dict
+            allowable dictionary
+        angle : int
+            angle of current allowables
+
+        Returns
+        -------
+        allowable dictionary with 90 deg values added where required
+
+        """
+        et, ec, es = self.et, self.ec, self.es
+        angle_p90 = angle + 90
+        angle_m90 = angle - 90
+        if angle_p90 in et and angle_p90 in ec and angle_p90 in es:
+            allowables.update({'et90': et[angle + 90], 'ec90': ec[angle + 90], 'es90': es[angle + 90]})
+        elif angle_m90 in et and angle_m90 in ec and angle_m90 in es:
+            allowables.update({'et90': et[angle - 90], 'ec90': ec[angle - 90], 'es90': es[angle - 90]})
+        else:
+            allowables.update({'et90': np.inf, 'ec90': np.inf, 'es90': np.inf})
+        return allowables
+
+    @staticmethod
+    def _strain_margins(strains: NDArray[(Any, 3), float], et: float = None, ec: float = None,
+                        es: float = None) -> NDArray[(Any, 2), float]:
         r"""Calculates margins of safety
+
+        Notes
+        -----
+        Assumes strains and allowables are all in same orientation (no rotations occur)
 
         Parameters
         ----------
         strains : ndarray
             2D nx3 array of [[:math: `\epsilon_x, \epsilon_y, \gamma_{xy}`], ...] in-plane strains
-        et0 : float, optional
-            tension strain allowable in 0 deg direction
-        et90 : float, optional
-            tension strain allowable in 90 deg direction
-        ec0 : float, optional
-            compression strain allowable in 0 deg direction
-        ec90 : float, optional
-            compression strain allowable in 90 deg direction
-        es0 : float, optional
-            shear strain allowable in 0 deg direction
-        es90 : float, optional
-            shear strain allowable in 90 deg direction
+        et : float, optional
+            tension strain allowable
+        ec : float, optional
+            compression strain allowable
+        es : float, optional
+            shear strain allowable
 
         Returns
         -------
         margins : ndarray
-            2D nx3 array [[x-dir margin, y-dir margin, xy margin], ...]
+            2D nx2 array [[tens./comp. margin, shear margin], ...]
 
         """
-        margins = np.empty((strains.shape[0], 3))
+        margins = np.empty((strains.shape[0], 2))
         margins[:] = np.inf
         with np.errstate(divide='ignore'):
-            # 0 deg direction
-            if et0 and ec0:
+            # tension/compression
+            if et and ec:
                 x_strains = strains[:, 0]
                 margins[:, 0] = np.select(
-                    [x_strains > 0, x_strains < 0], [et0/x_strains - 1, -abs(ec0)/x_strains - 1])
-            # 90 deg direction
-            if et90 and ec90:
-                y_strains = strains[:, 1]
-                margins[:, 1] = np.select(
-                    [y_strains > 0, y_strains < 0], [et90/y_strains - 1, -abs(ec90)/y_strains - 1])
-            # 0/90 shear
-            if es0 and es90:
+                    [x_strains > 0, x_strains < 0], [et/x_strains - 1, -abs(ec)/x_strains - 1])
+            # shear
+            if es:
                 xy_strains = np.abs(strains[:, 2])
                 # i_nz = np.nonzero(xy_strains)
-                es = min(abs(es0), abs(es90))
-                margins[:, 2] = es/xy_strains - 1
+                es = abs(es)
+                margins[:, 1] = es/xy_strains - 1
         return margins
 
-    def analyze(self, bearing, bypass, rc=0., num=100, w=0.):
+    def analyze(self, bearing: NDArray[2, float], bypass: NDArray[3, float], rc: float = 0.,
+                num: int = 100, w: float = 0.) -> NDArray[(Any, 6), float]:
         """ Analyze the joint for a set of loads
 
         Parameters
@@ -407,21 +430,33 @@ class MaxStrain(Analysis):
         Returns
         -------
         ndarray
-            2D numx6 array of margins of safety
-            [[<0 deg margin>, <90 deg margin>, <0/90 shear margin>,
-            <45 deg margin>, <-45 deg margin>, <45/-45 shear margin>], ...]
+            2D [num x <number of angles>*2] array of margins of safety
 
         """
-        e_all = self.e_allow
-        margins = np.empty((num, 6))
-        # check 0/90 direction
+        et, ec, es = self.et, self.ec, self.es
+        num_angles = len(self.et)
+        margins = np.empty((num, 2*num_angles))
         strains = self.strains(bearing, bypass, rc=rc, num=num, w=w)
-        margins[:, :3] = self._strain_margins(strains, et0=e_all['et0'], ec0=e_all['ec0'], et90=e_all['et90'],
-                                              ec90=e_all['ec90'], es0=e_all['es0'], es90=e_all['es90'])
-        # check 45/-45 direction
-        strains = lk.rotate_strains(strains, angle=np.deg2rad(45))
-        margins[:, 3:] = self._strain_margins(strains, et0=e_all['et45'], ec0=e_all['ec45'], et90=e_all['etn45'],
-                                              ec90=e_all['ecn45'], es0=e_all['es45'], es90=e_all['esn45'])
+        for iangle, angle in enumerate(self.et):  # et, es and ec are forced to have same keys in constructor
+            idx = iangle*2
+            allowables = {'et': et[angle], 'ec': ec[angle], 'es': es[angle]}
+            rotated_strains = lk.rotate_strains(strains, angle=np.deg2rad(angle))
+            margins[:, idx:idx+2] = self._strain_margins(rotated_strains, **allowables)
         return margins
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
