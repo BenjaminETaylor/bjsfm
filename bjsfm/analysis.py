@@ -313,7 +313,7 @@ class MaxStrain(Analysis):
 
     @staticmethod
     def _equalize_dicts(dicts: list[dict]) -> list[dict]:
-        """This method makes sure all dictionaries ar the same size and contain the same keys
+        """This method makes sure all dictionaries are the same size and contain the same keys
 
         Notes
         -----
