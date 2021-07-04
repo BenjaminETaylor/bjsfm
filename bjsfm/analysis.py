@@ -337,36 +337,6 @@ class MaxStrain(Analysis):
                         od[key] = np.inf
         return dicts
 
-    def _add_90_dirs(self, allowables: dict[str, Union[float]], angle: int = 0) -> dict[str, Union[float]]:
-        """This method adds allowables at 90 if they don't exist
-
-        Notes
-        -----
-        Expects dictionary arguments (et, ec, es) to be same size and have same keys
-
-        Parameters
-        ----------
-        allowables : dict
-            allowable dictionary
-        angle : int
-            angle of current allowables
-
-        Returns
-        -------
-        allowable dictionary with 90 deg values added where required
-
-        """
-        et, ec, es = self.et, self.ec, self.es
-        angle_p90 = angle + 90
-        angle_m90 = angle - 90
-        if angle_p90 in et and angle_p90 in ec and angle_p90 in es:
-            allowables.update({'et90': et[angle + 90], 'ec90': ec[angle + 90], 'es90': es[angle + 90]})
-        elif angle_m90 in et and angle_m90 in ec and angle_m90 in es:
-            allowables.update({'et90': et[angle - 90], 'ec90': ec[angle - 90], 'es90': es[angle - 90]})
-        else:
-            allowables.update({'et90': np.inf, 'ec90': np.inf, 'es90': np.inf})
-        return allowables
-
     @staticmethod
     def _strain_margins(strains: NDArray[(Any, 3), float], et: float = None, ec: float = None,
                         es: float = None) -> NDArray[(Any, 2), float]:
@@ -411,7 +381,7 @@ class MaxStrain(Analysis):
 
     def analyze(self, bearing: NDArray[2, float], bypass: NDArray[3, float], rc: float = 0.,
                 num: int = 100, w: float = 0.) -> NDArray[(Any, 6), float]:
-        """ Analyze the joint for a set of loads
+        """Analyze the joint for a set of loads
 
         Parameters
         ----------
