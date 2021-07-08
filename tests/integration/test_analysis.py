@@ -17,6 +17,22 @@ class TestMaxStrainQuasi(unittest.TestCase):
             ec={0: QUASI_UNC, 90: QUASI_UNC, 45: QUASI_UNC, -45: QUASI_UNC},
             es={0: SHEAR_STRN, 90: SHEAR_STRN, 45: SHEAR_STRN, -45: SHEAR_STRN},
         )
+    
+    def test_equalize_dicts(self):
+        analysis = MaxStrain(
+            QUASI, QUASI_THICK,
+            DIAMETER,
+            et={0: QUASI_UNT, 30: QUASI_UNT},
+            ec={90: QUASI_UNC, 60: QUASI_UNC},
+            es={45: SHEAR_STRN},
+        )
+        self.assertTrue(analysis.et.keys() == analysis.ec.keys() == analysis.es.keys())
+        self.assertAlmostEquals(analysis.et[0], QUASI_UNT)
+        self.assertAlmostEquals(analysis.et[30], QUASI_UNT)
+        self.assertAlmostEquals(analysis.ec[90], QUASI_UNC)
+        self.assertAlmostEquals(analysis.ec[60], QUASI_UNC)
+        self.assertAlmostEquals(analysis.es[45], SHEAR_STRN)
+        self.assertEqual(analysis.et[90], np.inf)
 
     def test_xy_points(self):
         rc = 0.
@@ -128,6 +144,35 @@ class TestMaxStrainQuasi(unittest.TestCase):
                 compare_margins[:, iangle*2+1] = abs(SHEAR_STRN) / xy_strains - 1
         assert_array_almost_equal(margins, compare_margins)
 
+    def test_random_allowables(self):
+        rc = 0.15
+        num = 4
+        bearing = [0, 0]
+        bypass = [1000., 0., 0.]
+        analysis = MaxStrain(
+            QUASI, QUASI_THICK, DIAMETER,
+            et={0: QUASI_UNT}, ec={90: QUASI_UNC}
+        )
+        margins = analysis.analyze(bearing, bypass, rc=rc, num=num)
+        strains = analysis.strains(bearing, bypass, rc=rc, num=num)
+        compare_margins = np.empty((num, 4))
+        with np.errstate(divide='ignore'):
+            # axial strains
+            x_strains = strains[:, 0]
+            compare_margins[:, 0] = np.select(
+                [x_strains > 0, x_strains < 0], [QUASI_UNT / x_strains - 1, -np.inf / x_strains - 1])
+            # shear strains
+            xy_strains = np.abs(strains[:, 2])
+            compare_margins[:, 1] = np.inf / xy_strains - 1
+            rotated_strains = rotate_strains(strains, angle=np.deg2rad(90))
+            # axial strains
+            x_strains = rotated_strains[:, 0]
+            compare_margins[:, 2] = np.select(
+                [x_strains > 0, x_strains < 0], [np.inf / x_strains - 1, -abs(QUASI_UNC) / x_strains - 1])
+            # shear strains
+            xy_strains = np.abs(rotated_strains[:, 2])
+            compare_margins[:, 3] = np.inf / xy_strains - 1
+        assert_array_almost_equal(margins, compare_margins)
 
 if __name__ == '__main__':
     unittest.main()
