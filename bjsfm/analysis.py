@@ -309,7 +309,19 @@ class MaxStrain(Analysis):
     def __init__(self, a_matrix: NDArray[(3, 3), float], thickness: float, diameter: float,
                  et: dict[int, float] = {}, ec: dict[int, float] = {}, es: dict[int, float] = {}) -> None:
         super(MaxStrain, self).__init__(a_matrix, thickness, diameter)
-        self.et, self.ec, self.es = self._equalize_dicts([et, ec, es])
+        self._et, self._ec, self._es = self._equalize_dicts([et, ec, es])
+    
+    @property
+    def et(self):
+        return self._et
+    
+    @property
+    def ec(self):
+        return self._ec
+    
+    @property
+    def es(self):
+        return self._es
 
     @staticmethod
     def _equalize_dicts(dicts: list[dict]) -> list[dict]:
@@ -403,11 +415,11 @@ class MaxStrain(Analysis):
             2D [num x <number of angles>*2] array of margins of safety
 
         """
-        et, ec, es = self.et, self.ec, self.es
-        num_angles = len(self.et)
+        et, ec, es = self._et, self._ec, self._es
+        num_angles = len(self._et)
         margins = np.empty((num, 2*num_angles))
         strains = self.strains(bearing, bypass, rc=rc, num=num, w=w)
-        for iangle, angle in enumerate(self.et):  # et, es and ec are forced to have same keys in constructor
+        for iangle, angle in enumerate(self._et):  # et, es and ec are forced to have same keys in constructor
             idx = iangle*2
             allowables = {'et': et[angle], 'ec': ec[angle], 'es': es[angle]}
             rotated_strains = lk.rotate_strains(strains, angle=np.deg2rad(angle))
