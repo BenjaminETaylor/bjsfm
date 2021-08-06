@@ -180,7 +180,7 @@ class Analysis:
         Returns
         -------
         ndarray
-            2D numx3 array of plate stresses
+            2D numx3 array of plate stresses (sx, sy, sxy)
 
         """
         x, y = self.xy_points(rc=rc, num=num)
