@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 from numpy.testing import assert_array_almost_equal
-from bjsfm.lekhnitskii import rotate_plane_stress, rotate_strains, LoadedHole, UnloadedHole
+from bjsfm.lekhnitskii import rotate_stress, rotate_strain, LoadedHole, UnloadedHole
 from bjsfm.analysis import MaxStrain
 from tests.test_data import *
 
@@ -53,10 +53,10 @@ class TestMaxStrainQuasi(unittest.TestCase):
         bypass = [100, 0, 0]
         angles = map(np.deg2rad, [0, 45, 90, -45, 60, -60])
         for angle in angles:
-            rotated_stresses = rotate_plane_stress(self.analysis.stresses(bearing, bypass), angle=angle)
+            rotated_stresses = rotate_stress(self.analysis.stresses(bearing, bypass), angle=angle)
             assert_array_almost_equal(
                 (self.analysis.a_inv @ (rotated_stresses * self.analysis.t).T).T,
-                rotate_strains(self.analysis.strains(bearing, bypass), angle=angle),
+                rotate_strain(self.analysis.strains(bearing, bypass), angle=angle),
             )
 
     def test_0_bearing_0_angle(self):
@@ -114,7 +114,7 @@ class TestMaxStrainQuasi(unittest.TestCase):
         bearing = [100, 100]
         bypass = [0, 0, 0]
         p, theta = self.analysis.bearing_angle(bearing)
-        bypass_correction = rotate_plane_stress(np.array([p/(2*w), 0, 0]), angle=-theta)
+        bypass_correction = rotate_stress(np.array([p/(2*w), 0, 0]), angle=-theta)
         brg = LoadedHole(p, DIAMETER, QUASI_THICK, QUASI_INV, theta=theta)
         byp = UnloadedHole(bypass_correction, DIAMETER, QUASI_THICK, QUASI_INV)
         x, y = self.analysis.xy_points(rc=0., num=100)
@@ -134,7 +134,7 @@ class TestMaxStrainQuasi(unittest.TestCase):
         compare_margins = np.empty((num, 2*len(self.analysis.et)))
         with np.errstate(divide='ignore'):
             for iangle, angle in enumerate(self.analysis.et):
-                rotated_strains = rotate_strains(strains, angle=np.deg2rad(angle))
+                rotated_strains = rotate_strain(strains, angle=np.deg2rad(angle))
                 # axial strains
                 x_strains = rotated_strains[:, 0]
                 compare_margins[:, iangle*2] = np.select(
@@ -164,7 +164,7 @@ class TestMaxStrainQuasi(unittest.TestCase):
             # shear strains
             xy_strains = np.abs(strains[:, 2])
             compare_margins[:, 1] = np.inf / xy_strains - 1
-            rotated_strains = rotate_strains(strains, angle=np.deg2rad(90))
+            rotated_strains = rotate_strain(strains, angle=np.deg2rad(90))
             # axial strains
             x_strains = rotated_strains[:, 0]
             compare_margins[:, 2] = np.select(

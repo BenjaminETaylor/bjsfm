@@ -5,12 +5,12 @@ import numpy as np
 # geometry inputs
 ####################################################################################################################
 DIAMETER = 0.25  # hole diameter
-STEP_DIST = 0.15  # distance to test away from hole edge
+STEP_DIST = 0.2  # distance to test away from hole edge
 
 ####################################################################################################################
 # test coverage inputs
 ####################################################################################################################
-NUM_POINTS = 100  # number of points to test around circumference
+NUM_POINTS = 200  # number of points to test around circumference
 
 ####################################################################################################################
 # material inputs

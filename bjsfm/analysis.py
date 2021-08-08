@@ -7,7 +7,7 @@ a third party CLPT package , the parent class `Analysis` can be used to extend t
 Tsai-Hill, etc.
 
 """
-from typing import Any, Union
+from typing import Any
 import numpy as np
 from matplotlib import pyplot as plt
 from nptyping import NDArray
@@ -91,9 +91,9 @@ class Analysis:
         bypass = np.array(bypass, dtype=float)
         p, theta = self.bearing_angle(bearing)
         if w:  # DeJong correction for finite width
-            brg_dir_bypass = lk.rotate_plane_stress(bypass, angle=theta)
+            brg_dir_bypass = lk.rotate_stress(bypass, angle=theta)
             sign = np.sign(brg_dir_bypass[0]) if abs(brg_dir_bypass[0]) > 0 else 1.
-            bypass += lk.rotate_plane_stress(np.array([p/(2*w)*sign, 0., 0.]), angle=-theta)
+            bypass += lk.rotate_stress(np.array([p/(2*w)*sign, 0., 0.]), angle=-theta)
         return lk.UnloadedHole(bypass, d, t, a_inv)
 
     def polar_points(self, rc: float = 0., num: int = 100) -> tuple[NDArray[Any, float], NDArray[Any, float]]:
@@ -218,6 +218,37 @@ class Analysis:
         strains = self.a_inv @ stresses.T*self.t
         return strains.T
 
+    def displacements(self, bearing: NDArray[2, float], bypass: NDArray[3, float],
+                 rc: float = 0., num: int = 100, w: float = 0.) -> NDArray[(Any, 3), float]:
+        """ Calculate displacements
+
+        Parameters
+        ----------
+        bearing : array_like
+            1D 1x2 array bearing load [Px, Py] (force)
+        bypass : array_like
+            1D 1x3 array bypass loads [Nx, Ny, Nxy] (force/unit-length)
+        rc : float, default 0.
+            characteristic distance
+        num : int, default 100
+            number of points to check around hole
+        w : float, default 0.
+            pitch or width in bearing load direction
+            (set to 0. for infinite plate)
+
+        Returns
+        -------
+        ndarray
+            2D numx2 array of plate displacements (u, v)
+
+        """
+        x, y = self.xy_points(rc=rc, num=num)
+        byp = self._unloaded(bearing, bypass, w=w)
+        brg = self._loaded(bearing)
+        byp_displacement = byp.displacement(x, y)
+        brg_displacement = brg.displacement(x, y)
+        return byp_displacement + brg_displacement
+
     def plot_stress(self, bearing: NDArray[2, float], bypass: NDArray[3, float], w: float = 0., comp: str = 'x',
                     rnum: int = 100, tnum: int = 100, axes: plt.axes = None,
                     xbounds: tuple[float, float] = None, ybounds: tuple[float, float] = None,
@@ -297,6 +328,8 @@ class MaxStrain(Analysis):
         2D 3x3 A-matrix from CLPT
     a_inv : ndarray
         2D 3x3 Inverse A-matrix from CLPT
+    angles : list
+        analysis angles (sorted)
     et : dict
         tension strain allowables
     ec : dict
@@ -312,16 +345,20 @@ class MaxStrain(Analysis):
         self._et, self._ec, self._es = self._equalize_dicts([et, ec, es])
     
     @property
-    def et(self):
+    def et(self) -> dict[int, float]:
         return self._et
     
     @property
-    def ec(self):
+    def ec(self) -> dict[int, float]:
         return self._ec
     
     @property
-    def es(self):
+    def es(self) -> dict[int, float]:
         return self._es
+    
+    @property
+    def angles(self) -> list[int]:
+        return sorted(self._et.keys())
 
     @staticmethod
     def _equalize_dicts(dicts: list[dict]) -> list[dict]:
@@ -329,7 +366,8 @@ class MaxStrain(Analysis):
 
         Notes
         -----
-        Maintains original contents of each dictionary, fills empty slots with np.inf
+        Maintains original contents of each dictionary, fills empty slots with np.inf, does
+        not guarantee the same insertion order in each dictionary
 
         Parameters
         ----------
@@ -419,10 +457,10 @@ class MaxStrain(Analysis):
         num_angles = len(self._et)
         margins = np.empty((num, 2*num_angles))
         strains = self.strains(bearing, bypass, rc=rc, num=num, w=w)
-        for iangle, angle in enumerate(self._et):  # et, es and ec are forced to have same keys in constructor
+        for iangle, angle in enumerate(self.angles):  # et, es and ec are forced to have same keys in constructor
             idx = iangle*2
             allowables = {'et': et[angle], 'ec': ec[angle], 'es': es[angle]}
-            rotated_strains = lk.rotate_strains(strains, angle=np.deg2rad(angle))
+            rotated_strains = lk.rotate_strain(strains, angle=np.deg2rad(angle))
             margins[:, idx:idx+2] = self._strain_margins(rotated_strains, **allowables)
         return margins
 

@@ -30,8 +30,8 @@ from nptyping import NDArray
 logger = logging.getLogger(__name__)
 
 
-def rotate_plane_stress(stresses: NDArray[3, np.float], angle: float = 0.) -> NDArray[3, np.float]:
-    r"""Rotates the stress components by given angle
+def rotate_stress(stresses: NDArray[3, np.float], angle: float = 0.) -> NDArray[3, np.float]:
+    r"""Rotates 2D stress components by given angle
 
     The rotation angle is positive counter-clockwise from the positive x-axis in the cartesian xy-plane.
 
@@ -59,8 +59,8 @@ def rotate_plane_stress(stresses: NDArray[3, np.float], angle: float = 0.) -> ND
     return stresses.T
 
 
-def rotate_strains(strains: NDArray[3, np.float], angle: float = 0.) -> NDArray[3, float]:
-    r"""Rotates the strain components by given angle
+def rotate_strain(strains: NDArray[3, np.float], angle: float = 0.) -> NDArray[3, float]:
+    r"""Rotates 2D strain components by given angle
 
     The rotation angle is positive counter-clockwise from the positive x-axis in the cartesian xy-plane.
 
@@ -870,7 +870,7 @@ class LoadedHole(Hole):
 
         Notes
         -----
-        This method implements [Eq. 31, Ref. 4]
+        This method implements [Eq. 37.3, Ref. 2]
 
         .. math:: C_m=\frac{\beta_m-\mu_2\alpha_m}{\mu_1-\mu_2}
         .. math:: \Phi_1=A\ln{\xi_1}+\sum_{m=1}^{\infty}\frac{C_m}{\xi_1^m}
@@ -905,7 +905,7 @@ class LoadedHole(Hole):
 
         Notes
         -----
-        This method implements [Eq. 37.6, Ref. 2]
+        This method implements [Eq. 37.3, Ref. 2]
 
         .. math:: C_m=\frac{\beta_m-\mu_1\alpha_m}{\mu_1-\mu_2}
         .. math:: \Phi_2=B\ln{\xi_2}-\sum_{m=1}^{\infty}\frac{m C_m}{\xi_2^m}
@@ -1077,7 +1077,7 @@ class LoadedHole(Hole):
 
         # calculate stresses and rotate back
         stresses = super().stress(x, y)
-        return rotate_plane_stress(stresses, angle=-self.theta)
+        return rotate_stress(stresses, angle=-self.theta)
 
     def displacement(self, x: NDArray[Any, float], y: NDArray[Any, float]) -> NDArray[(Any, 2), float]:
         r""" Calculates the displacement at (x, y) points in the plate

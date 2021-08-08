@@ -1,5 +1,6 @@
 import numpy as np
 from bjsfm.analysis import MaxStrain
+from lekhnitskii import rotate_stress, rotate_strain
 
 
 print('Do you want instructions? [YES/NO]')
@@ -21,7 +22,7 @@ a11, a12, a16, a22, a26, a66 = map(float, input().split(','))
 if 5 in output:
     if instructions:
         print('Input analysis angles [<angle-1>, <angle-2>, ...]')
-    angles = list(map(float, input().split(',')))
+    angles = list(map(int, input().split(',')))
     if instructions:
         print('Input tension allowables at each angle [<tens-1>, <tens-2>, ...]')
     tension = list(map(float, input().split(',')))
@@ -66,14 +67,14 @@ def print_title(title):
 
 
 def print_string_fields(fields):
-    assert len(fields) == 8, f'{len(fields)} fields given. must be 8.'
+    # assert len(fields) == 8, f'{len(fields)} fields given. must be 8.'
     for field in fields:
         print(f'{field:^9}', end='')
     print()
 
 
 def print_number_fields(fields):
-    assert len(fields) == 8, f'{len(fields)} fields given. must be 8.'
+    # assert len(fields) == 8, f'{len(fields)} fields given. must be 8.'
     for field in fields:
         print(f'{field:>9.3g}', end='')
     print()
@@ -91,7 +92,7 @@ def principal_components(xy_components):
 
 def print_laminate_streses():
     print_title('LAMINATE STRESSES')
-    print_string_fields(['DIST', 'ANGLE', 'X STRESS', 'Y STRESS', 'SHEAR', 'MAX.', 'MIN.', 'DIRECTION'])
+    print_string_fields(['DIST', 'ANGLE', 'X STRESS', 'Y STRESS', 'SHEAR', 'MAX', 'MIN', 'DIRECTION'])
     print_string_fields([' ']*4+['STRESS', 'PRINCIPAL', 'PRINCIPAL', ' '])
     for step in range(num_steps):
         distance = step*step_size
@@ -101,12 +102,80 @@ def print_laminate_streses():
         for istress, stress in enumerate(stresses):
             print_number_fields([distance, pnt_angles[istress], stress[0], stress[1], stress[2], 
                 max_prin[istress], min_prin[istress], prin_angle[istress]])
+    print()
+
+
+def print_displacements():
+    print_title('DISPLACEMENTS')
+    print_string_fields(['DIST', 'ANGLE', 'U', 'V'])
+    for step in range(num_steps):
+        distance = step*step_size
+        displacements = analysis.displacements([px, py], [nx, ny, nxy], rc=distance, num=num_pts, w=width)
+        pnt_angles = np.linspace(0, 360, num_pts, endpoint=False)
+        for idisp, disp in enumerate(displacements):
+            print_number_fields([distance, pnt_angles[idisp], disp[0], disp[1]]) 
+    print()
+
+
+def print_laminate_strains():
+    print_title('LAMINATE STRAINS')
+    print_string_fields(['DIST', 'ANGLE', 'X STRAIN', 'Y STRAIN', 'SHEAR', 'MAX', 'MIN', 'DIRECTION'])
+    print_string_fields([' ']*4+['STRAIN', 'PRINCIPAL', 'PRINCIPAL', ' '])
+    for step in range(num_steps):
+        distance = step*step_size
+        strains = analysis.strains([px, py], [nx, ny, nxy], rc=distance, num=num_pts, w=width)
+        pnt_angles = np.linspace(0, 360, num_pts, endpoint=False)
+        max_prin, min_prin, prin_angle = principal_components(strains)
+        for istrain, strain in enumerate(strains):
+            print_number_fields([distance, pnt_angles[istrain], strain[0], strain[1], strain[2], 
+                max_prin[istrain], min_prin[istrain], prin_angle[istrain]])
+    print()
+
+
+def print_circumferential_radial():
+    print_title('CIRCUMFERENTIAL AND RADIAL STRESSES & STRAINS')
+    print_string_fields(['DIST', 'ANGLE', 'THETA', 'RADIAL', 'SHEAR', 'THETA', 'RADIAL', 'SHEAR'])
+    print_string_fields([' ']*2 + ['STRESS']*3 + ['STRAIN']*3)
+    for step in range(num_steps):
+        distance = step*step_size
+        strains = analysis.strains([px, py], [nx, ny, nxy], rc=distance, num=num_pts, w=width)
+        stresses = analysis.stresses([px, py], [nx, ny, nxy], rc=distance, num=num_pts, w=width)
+        pnt_angles = np.linspace(0, 360, num_pts, endpoint=False)
+        for iangle, pnt_angle in enumerate(pnt_angles):
+            strain = rotate_strain(strains[iangle], np.deg2rad(pnt_angle))
+            stress = rotate_stress(stresses[iangle], np.deg2rad(pnt_angle))
+            print_number_fields([distance, pnt_angle, stress[0], stress[1], stress[2], 
+                strain[0], strain[1], strain[2]]) 
+    print()
+
+
+def print_margins():
+    print_title('MAX STRAIN MARGINS')
+    print_string_fields(['DIST', 'ANGLE'] + 
+        [f(angle) for angle in analysis.angles 
+            for f in (lambda angle: f'{angle}AXIAL', lambda angle: f'{angle}SHEAR')])
+    for step in range(num_steps):
+        distance = step*step_size
+        pnt_angles = np.linspace(0, 360, num_pts, endpoint=False)
+        margins = analysis.analyze([px, py], [nx, ny, nxy], rc=distance, num=num_pts, w=width)
+        for iangle, angle in enumerate(pnt_angles):
+            print_number_fields([distance, angle] + margins[iangle].tolist()) 
+    print()
+
 
 if 1 in output:
     print_laminate_streses()
 
+if 2 in output:
+    print_laminate_strains()
 
+if 3 in output:
+    print_circumferential_radial()
 
-    
+if 4 in output:
+    print_displacements()
+
+if 5 in output:
+    print_margins()
 
 
