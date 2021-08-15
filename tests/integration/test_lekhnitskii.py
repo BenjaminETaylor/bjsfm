@@ -94,7 +94,7 @@ class HoleTests(unittest.TestCase):
                 fortran_displacements[1][0][i],
                 delta=self.V_DELTA
             )
-            if step > 0. and len(python_stresses) == 2*len(X_POINTS):
+            if step > 0:  # and len(python_stresses) == 2*len(X_POINTS):
                 py_step_index = i+len(X_POINTS)//2
                 # compare x-dir stress at step distance
                 self.assertAlmostEqual(
@@ -152,7 +152,7 @@ class HoleTests(unittest.TestCase):
         p_func = LoadedHole(p, d, h, a_inv, theta=np.deg2rad(alpha))
         p_stress = p_func.stress(x_pnts, y_pnts)
         p_disp = p_func.displacement(x_pnts, y_pnts)
-        f_stress, f_u, f_v = bjsfm.loaded(4*p/h, d, a_inv, alpha, step, len(x_pnts)//2)
+        f_stress, f_u, f_v = bjsfm.loaded(p/(d*h), d, a_inv, alpha, step, len(x_pnts)//2)
         return f_stress, p_stress, np.array([f_u, f_v]), p_disp
 
 

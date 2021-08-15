@@ -133,7 +133,7 @@ class TestMaxStrainQuasi(unittest.TestCase):
         strains = self.analysis.strains(bearing, bypass, rc=rc, num=num)
         compare_margins = np.empty((num, 2*len(self.analysis.et)))
         with np.errstate(divide='ignore'):
-            for iangle, angle in enumerate(self.analysis.et):
+            for iangle, angle in enumerate(self.analysis.angles):
                 rotated_strains = rotate_strain(strains, angle=np.deg2rad(angle))
                 # axial strains
                 x_strains = rotated_strains[:, 0]
