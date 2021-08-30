@@ -711,6 +711,21 @@ class UnloadedHole(Hole):
         return np.array([sx + sx_app, sy + sy_app, sxy + sxy_app]).T
 
 
+def _remove_bad_displacments(disp_func): 
+    """ removes displacements that are 180 degrees behind bearing load direction"""
+    def inner(self, x: NDArray[Any, float], y: NDArray[Any, float]) -> NDArray[(Any, 2), float]:
+        # call displacement function
+        displacements = disp_func(self, x, y)
+        # check if any points are 180 degrees behind bearing load
+        r, angles = self._cartesian_to_polar(x, y)
+        bad_angle = self.theta + np.pi
+        # if so, replace those results with np.nan
+        displacements[angles == bad_angle] == np.nan
+        return displacements
+
+    return inner 
+
+
 class LoadedHole(Hole):
     """Class for defining a loaded hole in an infinite anisotropic homogeneous plate
 
@@ -1014,7 +1029,38 @@ class LoadedHole(Hole):
         # return results for each point in xi_2
         return np.array([1 / eta_2[i] * (B + np.sum(m * (beta - mu1 * alpha) / (mu1 - mu2) / xi_2[i] ** m))
                          for i in range(len(xi_2))])
+    
+    def _cartesian_to_polar(self,  x: NDArray[Any, float], y: NDArray[Any, float])\
+            -> tuple[NDArray[Any, float], NDArray[Any, float]]:
+        """(Private method) Converts cartesian points to polar coordinates
 
+        Parameters
+        ----------
+        x : array_like
+            1D array x locations in the cartesian coordinate system
+        y : array_like
+            1D array y locations in the cartesian coordinate system
+
+        Returns
+        -------
+        radii : ndarray
+            radius of each point
+        angles : ndarray
+            angle of each point
+
+        """
+        x = np.array(x, dtype=float)
+        y = np.array(y, dtype=float)
+        r = np.sqrt(x**2 + y**2)
+
+        # calculate angles and fix signs
+        angles = np.arccos(np.array([1, 0]).dot(np.array([x, y])) / r)
+        where_vals = np.nonzero(y)[0]
+        angles[where_vals] = angles[where_vals] * np.sign(y[where_vals])
+
+        return r, angles
+
+        
     def _rotate_points(self, x: NDArray[Any, float], y: NDArray[Any, float])\
             -> tuple[NDArray[Any, float], NDArray[Any, float]]:
         """(Private method) Rotates points to account for bearing angle
@@ -1038,13 +1084,7 @@ class LoadedHole(Hole):
         rotation = -self.theta
 
         # convert points to polar coordinates
-        x = np.array(x, dtype=float)
-        y = np.array(y, dtype=float)
-        r = np.sqrt(x**2 + y**2)
-        # calculate angles and fix signs
-        angles = np.arccos(np.array([1, 0]).dot(np.array([x, y])) / r)
-        where_vals = np.nonzero(y)[0]
-        angles[where_vals] = angles[where_vals] * np.sign(y[where_vals])
+        r, angles = self._cartesian_to_polar(x, y)
 
         # rotate coordinates by negative theta
         angles += rotation
@@ -1079,6 +1119,7 @@ class LoadedHole(Hole):
         stresses = super().stress(x, y)
         return rotate_stress(stresses, angle=-self.theta)
 
+    @_remove_bad_displacments
     def displacement(self, x: NDArray[Any, float], y: NDArray[Any, float]) -> NDArray[(Any, 2), float]:
         r""" Calculates the displacement at (x, y) points in the plate
 
@@ -1106,6 +1147,5 @@ class LoadedHole(Hole):
         # rotate points to account for bearing angle
         x, y = self._rotate_points(x, y)
         return super().displacement(x, y)
-
 
 
