@@ -711,16 +711,16 @@ class UnloadedHole(Hole):
         return np.array([sx + sx_app, sy + sy_app, sxy + sxy_app]).T
 
 
-def _remove_bad_displacments(disp_func): 
+def _remove_bad_displacments(displacement_func): 
     """ removes displacements that are 180 degrees behind bearing load direction"""
     def inner(self, x: NDArray[Any, float], y: NDArray[Any, float]) -> NDArray[(Any, 2), float]:
         # call displacement function
-        displacements = disp_func(self, x, y)
+        displacements = displacement_func(self, x, y)
         # check if any points are 180 degrees behind bearing load
         r, angles = self._cartesian_to_polar(x, y)
-        bad_angle = self.theta + np.pi
+        bad_angle = np.pi if self.theta == 0 else -1*(np.pi - self.theta)
         # if so, replace those results with np.nan
-        displacements[angles == bad_angle] == np.nan
+        displacements[np.isclose(angles, bad_angle)] = np.nan
         return displacements
 
     return inner 
