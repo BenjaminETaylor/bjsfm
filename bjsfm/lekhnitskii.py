@@ -21,6 +21,7 @@ References
 """
 import logging
 import abc
+from collections.abc import Callable
 from typing import Any
 import numpy as np
 import numpy.testing as nptest
@@ -711,7 +712,8 @@ class UnloadedHole(Hole):
         return np.array([sx + sx_app, sy + sy_app, sxy + sxy_app]).T
 
 
-def _remove_bad_displacments(displacement_func): 
+def _remove_bad_displacments(displacement_func: 
+    Callable[[object, NDArray[Any, float], NDArray[Any, float]], NDArray[(Any, 2), float]]): 
     """ removes displacements that are 180 degrees behind bearing load direction"""
     def inner(self, x: NDArray[Any, float], y: NDArray[Any, float]) -> NDArray[(Any, 2), float]:
         # call displacement function

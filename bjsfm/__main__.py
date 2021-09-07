@@ -1,10 +1,29 @@
+import sys, re
 import numpy as np
 from bjsfm.analysis import MaxStrain
 from lekhnitskii import rotate_stress, rotate_strain
 
 
+# regex for testing input
+numeric = r'[0-9]*\.?[0-9]*(, ?[0-9]*\.?[0-9]*)*'
+
+
+def check_input(regex: str, error_msg: str = 'Please try again...'):
+    while True:
+        attempt = input()
+        if attempt == '':
+            print(error_msg)
+            continue
+        if str.lower(attempt) in ('exit', 'quit'):
+            sys.exit('Program terminated.')
+        match = re.fullmatch(regex, attempt)
+        if match:
+            return attempt
+        print(error_msg)
+
+
 print('Do you want instructions? [YES/NO]')
-instructions = True if input().lower() == 'yes' else False
+instructions = True if check_input(r'\w{2,3}').lower() == 'yes' else False
 
 if instructions:
     print('Select desired output from the following cases:\n\
@@ -13,41 +32,41 @@ if instructions:
         3  Circumferential & radial stresses/strains\n\
         4  Displacements\n\
         5  Laminate max strain margins')
-output = list(map(int, input().split(',')))
+output = list(map(int, check_input(numeric).split(',')))
 
 if instructions:
     print('Input A-matrix terms [A11, A12, A16, A22, A26, A66]')
-a11, a12, a16, a22, a26, a66 = map(float, input().split(','))
+a11, a12, a16, a22, a26, a66 = map(float, check_input(numeric).split(','))
 
 if 5 in output:
     if instructions:
         print('Input analysis angles [<angle-1>, <angle-2>, ...]')
-    angles = list(map(int, input().split(',')))
+    angles = list(map(int, check_input(numeric).split(',')))
     if instructions:
-        print('Input tension allowables at each angle [<tens-1>, <tens-2>, ...]')
-    tension = list(map(float, input().split(',')))
+        print('Input tension strain allowables at each angle [<tens-1>, <tens-2>, ...]')
+    tension = list(map(float, check_input(numeric).split(',')))
     if instructions:
-        print('Input compression allowables at each angle [<comp-1>, <comp-2>, ...]')
-    compression = list(map(float, input().split(',')))
+        print('Input compression strain allowables at each angle [<comp-1>, <comp-2>, ...]')
+    compression = list(map(float, check_input(numeric).split(',')))
     if instructions:
-        print('Input shear allowables at each angle [<shear-1>, <shear-2>, ...]')
-    shear = list(map(float, input().split(',')))
+        print('Input shear strain allowables at each angle [<shear-1>, <shear-2>, ...]')
+    shear = list(map(float, check_input(numeric).split(',')))
 
 if instructions:
     print('Input laminate thickness')
-thickness = float(input())
+thickness = float(check_input(numeric))
 
 if instructions:
     print('Input far field and bearing forces [Nx, Ny, Nxy, Px, Py]')
-nx, ny, nxy, px, py = map(float, input().split(','))
+nx, ny, nxy, px, py = map(float, check_input(numeric).split(','))
 
 if instructions:
     print('Input width (0.0 for infinite plate)')
-width = float(input())
+width = float(check_input(numeric))
 
 if instructions:
     print('Input bolt diameter, number of output points, step increment and number of steps desired')
-diameter, num_pts, step_size, num_steps = input().split(',')
+diameter, num_pts, step_size, num_steps = check_input(numeric).split(',')
 diameter, step_size = float(diameter), float(step_size)
 num_pts, num_steps = int(num_pts), int(num_steps)
 
