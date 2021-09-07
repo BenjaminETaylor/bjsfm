@@ -23,13 +23,13 @@ All examples below use the following inputs.
 
 >>> import numpy as np
 >>> # A-matrix from CLPT
->>> a = np.array(
+>>> a_matrix = np.array(
 ...     [[988374.5, 316116.9, 0.],
 ...      [316116.9, 988374.5, 0.],
 ...      [0., 0., 336128.8]]
 ... )
->>> t = 0.0072*16  # laminate thickness [in]
->>> d = 0.25  # diameter [in]
+>>> thickness = 0.0072*16  # laminate thickness [in]
+>>> diameter = 0.25  # diameter [in]
 >>> step = 0.015  # characteristic distance [in]
 >>> num_pnts = 100
 
@@ -41,10 +41,10 @@ Start an analysis by creating a ``MaxStrain`` object.
 >>> from bjsfm.analysis import MaxStrain
 >>> # create analysis with fake strain allowables
 >>> analysis = MaxStrain(
-...     a, t, d,
-...     et0=0.004000, et90=0.004000, et45=0.004000, etn45=0.004000,
-...     ec0=0.005000, ec90=0.005000, ec45=0.005000, ecn45=0.005000,
-...     es0=0.003000, es90=0.003000, es45=0.003000, esn45=0.003000,
+...     a_matrix, thickness, diameter,
+...     et={0:0.004, 90:0.004, 45:0.004, -45:0.004},
+...     ec={0:0.005, 90:0.005, 45:0.005, -45:0.005},
+...     es={0:0.003, 90:0.003, 45:0.003, -45:0.003},
 ... )
 
 Run an analysis by calling the ``analyze`` method.
@@ -53,10 +53,10 @@ Run an analysis by calling the ``analyze`` method.
 >>> bypass = [300, 0, 0]
 >>> # w=0 for infinite plate
 >>> analysis.analyze(bearing, bypass, rc=step, num=num_pnts, w=0.)
-array([[9.06850940e+00, 3.00577494e+01, 1.95809218e+11, 2.61882826e+01,
-        2.61882826e+01, 3.79700536e+00],
-       [9.17419960e+00, 3.03929542e+01, 2.40684721e+01, 1.96742170e+01,
-        3.99249376e+01, 3.84765222e+00], ...
+array([[2.61882825e+01, 3.79700526e+00, 9.06850925e+00, 2.34971062e+11,
+        2.61882825e+01, 3.79700526e+00, 3.00577480e+01, 2.34972471e+11],
+       [3.99249374e+01, 3.84765228e+00, 9.17419967e+00, 2.40684721e+01,
+        1.96742170e+01, 3.84765228e+00, ...
 
 Lekhitskii's Solutions
 ^^^^^^^^^^^^^^^^^^^^^^

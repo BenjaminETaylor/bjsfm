@@ -3,17 +3,23 @@ Bolted Joint Stress Field Model (BJSFM) is a common analytical method used to an
 airframe structures. This project ports the original fortran code to pure python code using the underlying theory.
 
 ```
-    from bjsfm.lekhnitskii import UnloadedHole
-    a_inv = [[0.1, 0.05, 0.], [0.05, 0.1, 0.], [0., 0., 0.5]]  # inverse a-matrix from CLPT
-    loads = [100, 100, 50]  # force / unit length
-    plate = UnloadedHole(diameter=0.25, thickness=0.1, a_inv=a_inv, loads=loads)
+    from bjsfm.analysis import MaxStrain
+    a_matrix = [[988374.5, 316116.9, 0.],
+                [316116.9, 988374.5, 0.],
+                [0., 0., 336128.8]]
+    thickness = 0.1152
+    diameter = 0.25
+    analysis = MaxStrain(a_matrix, thickness, diameter)
 
-    # get stresses at four points around hole
-    plate.stress(x=[0.125, 0., -0.125, 0.], y=[0., 0.125, 0., -0.125])
-    
+    # get stresses, strains and displacements at four points around hole
+    bearing = [100, 0]
+    bypass = [100, 0, 0]
+    analysis.stresses(bearing, bypass, num=4)
+    analysis.strains(bearing, bypass, num=4)
+    analysis.displacements(bearing, bypass, num=4)
+
     # plot stresses
-    from bjsfm import plotting
-    plotting.plot_stress(plate)
+    analysis.plot_stress(bearing, bypass)
 ```
 
 ## Installation
@@ -26,12 +32,16 @@ https://bjsfm.readthedocs.io
 
 ## Features
 
-- [ ] Lekhnitskii's anisotropic elasticity solutions for loaded (cosine distribution) and unloaded holes
+- [X] Lekhnitskii's anisotropic elasticity solutions for loaded (cosine distribution) and unloaded holes
     - [X] stresses
-    - [ ] displacements
+    - [X] displacements
 - [X] Combined bearing and bypass 2D infinite plate stress distribution
 - [X] Optional DeJong tension (or compression) finite width correction
 - [X] Max strain analysis
+- [ ] Plotting
+    - [X] stresses
+    - [ ] displacements
+- [X] Command-line Interface (CLI)
 
 ## Contribute
 
