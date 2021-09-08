@@ -15,8 +15,8 @@ airframe structures. This project ports the original fortran code to pure python
     analysis = MaxStrain(a_matrix, thickness, diameter)
 
     # get stresses, strains and displacements at four points around hole
-    bearing = [100, 0]
-    bypass = [100, 0, 0]
+    bearing = [100, 0]  #[Px, Py]
+    bypass = [100, 0, 0]  #[Nx, Ny, Nxy]
     analysis.stresses(bearing, bypass, num=4)
     analysis.strains(bearing, bypass, num=4)
     analysis.displacements(bearing, bypass, num=4)
