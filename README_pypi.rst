@@ -5,6 +5,7 @@
 
 Bolted Joint Stress Field Model (BJSFM) is a common analytical method used to analyze bolted joints in composite
 airframe structures. This project ports the original fortran code to pure python code using the underlying theory. 
+
 .. code-block:: python
 
     from bjsfm.analysis import MaxStrain
