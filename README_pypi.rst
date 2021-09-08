@@ -37,10 +37,10 @@ https://bjsfm.readthedocs.io
 Features
 --------
 
-* [ ] Lekhnitskii's anisotropic elasticity solutions for loaded (cosine distribution) and unloaded holes
+* [X] Lekhnitskii's anisotropic elasticity solutions for loaded (cosine distribution) and unloaded holes
 
     * [X] stresses
-    * [ ] displacements
+    * [X] displacements
 
 * [X] Combined bearing and bypass 2D infinite plate stress distribution
 * [X] Optional DeJong tension (or compression) bearing correction
@@ -51,6 +51,11 @@ Features
     * [ ] displacements
 
 * [X] Command-line Interface (CLI)
+
+Web App
+-------
+
+https://www.centricengineers.com/free-software/ce-bjsfm
 
 Contribute
 ----------

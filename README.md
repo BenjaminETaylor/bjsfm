@@ -43,6 +43,10 @@ https://bjsfm.readthedocs.io
     - [ ] displacements
 - [X] Command-line Interface (CLI)
 
+## Web App
+
+https://www.centricengineers.com/free-software/ce-bjsfm
+
 ## Contribute
 
 - Issue Tracker: https://github.com/BenjaminETaylor/bjsfm/issues

@@ -99,7 +99,7 @@ To initiate the command-line interface (CLI) type the following at a command pro
 
    python bjsfm
 
-Live Webapp
+Web App
 -----------
 
 For an interactive GUI experience go to: https://www.centricengineers.com/free-software/ce-bjsfm
