@@ -31,7 +31,7 @@ All examples below use the following inputs.
 >>> thickness = 0.0072*16  # laminate thickness [in]
 >>> diameter = 0.25  # diameter [in]
 >>> step = 0.015  # characteristic distance [in]
->>> num_pnts = 100
+>>> num_pnts = 100  # number of points around hole
 
 Max Strain Analysis
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -42,6 +42,7 @@ Start an analysis by creating a ``MaxStrain`` object.
 >>> # create analysis with fake strain allowables
 >>> analysis = MaxStrain(
 ...     a_matrix, thickness, diameter,
+...     # allowables dictionary format {<angle>: <allowable>}
 ...     et={0:0.004, 90:0.004, 45:0.004, -45:0.004},
 ...     ec={0:0.005, 90:0.005, 45:0.005, -45:0.005},
 ...     es={0:0.003, 90:0.003, 45:0.003, -45:0.003},
@@ -49,8 +50,8 @@ Start an analysis by creating a ``MaxStrain`` object.
 
 Run an analysis by calling the ``analyze`` method.
 
->>> bearing = [100, 0]
->>> bypass = [300, 0, 0]
+>>> bearing = [100, 0]  #[Px, Py]
+>>> bypass = [300, 0, 0]  #[Nx, Ny, Nxy]
 >>> # w=0 for infinite plate
 >>> analysis.analyze(bearing, bypass, rc=step, num=num_pnts, w=0.)
 array([[2.61882825e+01, 3.79700526e+00, 9.06850925e+00, 2.34971062e+11,
