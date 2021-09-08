@@ -90,6 +90,19 @@ Plot the combined stresses.
 
 .. image:: ../img/example_stress_plot.png
    :height: 350px
+ 
+Command-Line Interface (CLI)
+----------------------------
+
+To initiate the command-line interface (CLI) type the following at a command prompt.
+::
+
+   python bjsfm
+
+Live Webapp
+-----------
+
+For an interactive GUI experience go to: https://www.centricengineers.com/free-software/ce-bjsfm
 
 Contribute
 ----------
