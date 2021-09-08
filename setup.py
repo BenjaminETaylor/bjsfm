@@ -10,7 +10,7 @@ README = (HERE / "README_pypi.rst").read_text()
 # This call to setup() does all the work
 setup(
     name="bjsfm",
-    version="0.5.0",
+    version="0.5.1",
     description="Bolted Joint Stress Field Model",
     long_description=README,
     long_description_content_type="text/x-rst",
