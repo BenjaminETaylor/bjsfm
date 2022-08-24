@@ -98,7 +98,7 @@ class HoleTests(unittest.TestCase):
                     fortran_displacements[1][0][i],
                     delta=self.V_DELTA
                 )
-            if step > 0: # and len(python_stresses) == 2*len(X_POINTS):
+            if step > 0:  # and len(python_stresses) == 2*len(X_POINTS):
                 py_step_index = i+len(X_POINTS)//2
                 # compare x-dir stress at step distance
                 self.assertAlmostEqual(

@@ -10,7 +10,7 @@ Tsai-Hill, etc.
 from typing import Any
 import numpy as np
 from matplotlib import pyplot as plt
-from nptyping import NDArray
+from nptyping import NDArray, Shape, Float
 import bjsfm.lekhnitskii as lk
 from bjsfm.plotting import plot_stress
 
@@ -40,13 +40,13 @@ class Analysis:
 
     """
 
-    def __init__(self, a_matrix: NDArray[(3, 3), float], thickness: float, diameter: float) -> None:
+    def __init__(self, a_matrix: NDArray[Shape['3, 3'], Float], thickness: float, diameter: float) -> None:
         self.t = thickness
         self.r = diameter/2.
         self.a = np.array(a_matrix, dtype=float)
         self.a_inv = np.linalg.inv(self.a)
 
-    def _loaded(self, bearing: NDArray[2, float]) -> lk.LoadedHole:
+    def _loaded(self, bearing: NDArray[Shape['2'], Float]) -> lk.LoadedHole:
         """Lekhnitskii's loaded hole solution
 
         Parameters
@@ -66,7 +66,8 @@ class Analysis:
         p, theta = self.bearing_angle(bearing)
         return lk.LoadedHole(p, d, t, a_inv, theta=theta)
 
-    def _unloaded(self, bearing: NDArray[2, float], bypass: NDArray[3, float], w: float = 0.) -> lk.UnloadedHole:
+    def _unloaded(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float], w: float = 0.) \
+            -> lk.UnloadedHole:
         """Lekhnitskii's unloaded hole solution
 
         Parameters
@@ -96,7 +97,8 @@ class Analysis:
             bypass += lk.rotate_stress(np.array([p/(2*w)*sign, 0., 0.]), angle=-theta)
         return lk.UnloadedHole(bypass, d, t, a_inv)
 
-    def polar_points(self, rc: float = 0., num: int = 100) -> tuple[NDArray[Any, float], NDArray[Any, float]]:
+    def polar_points(self, rc: float = 0., num: int = 100) \
+            -> tuple[NDArray[Shape['*'], Float], NDArray[Shape['*'], Float]]:
         """Calculates r, theta points
 
         Parameters
@@ -116,7 +118,8 @@ class Analysis:
         theta = np.linspace(0, 2*np.pi, num=num, endpoint=False)
         return r, theta
 
-    def xy_points(self, rc: float = 0., num: int = 100) -> tuple[NDArray[Any, float], NDArray[Any, float]]:
+    def xy_points(self, rc: float = 0., num: int = 100) \
+            -> tuple[NDArray[Shape['*'], Float], NDArray[Shape['*'], Float]]:
         """Calculates x, y points
 
         Parameters
@@ -138,7 +141,7 @@ class Analysis:
         return x, y
 
     @staticmethod
-    def bearing_angle(bearing: NDArray[2, float]) -> tuple[float, float]:
+    def bearing_angle(bearing: NDArray[Shape['2'], Float]) -> tuple[float, float]:
         """Calculates bearing load and angle
 
         Parameters
@@ -159,8 +162,8 @@ class Analysis:
         theta = theta*np.sign(bearing[1]) if bearing[1] else theta
         return p, theta
 
-    def stresses(self, bearing: NDArray[2, float], bypass: NDArray[3, float],
-                 rc: float = 0., num: int = 100, w: float = 0.) -> NDArray[(Any, 3), float]:
+    def stresses(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float],
+                 rc: float = 0., num: int = 100, w: float = 0.) -> NDArray[Shape['*, 3'], Float]:
         """ Calculate stresses
 
         Parameters
@@ -190,8 +193,8 @@ class Analysis:
         brg_stress = brg.stress(x, y)
         return byp_stress + brg_stress
 
-    def strains(self, bearing: NDArray[2, float], bypass: NDArray[3, float],
-                rc: float = 0., num: int = 100, w: float = 0.) -> NDArray[(Any, 3), float]:
+    def strains(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float],
+                rc: float = 0., num: int = 100, w: float = 0.) -> NDArray[Shape['*, 3'], Float]:
         """ Calculate strains
 
         Parameters
@@ -218,8 +221,8 @@ class Analysis:
         strains = self.a_inv @ stresses.T*self.t
         return strains.T
 
-    def displacements(self, bearing: NDArray[2, float], bypass: NDArray[3, float],
-                 rc: float = 0., num: int = 100, w: float = 0.) -> NDArray[(Any, 3), float]:
+    def displacements(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float],
+                 rc: float = 0., num: int = 100, w: float = 0.) -> NDArray[Shape['*, 2'], Float]:
         """ Calculate displacements
 
         Parameters
@@ -249,8 +252,8 @@ class Analysis:
         brg_displacement = brg.displacement(x, y)
         return byp_displacement + brg_displacement
 
-    def plot_stress(self, bearing: NDArray[2, float], bypass: NDArray[3, float], w: float = 0., comp: str = 'x',
-                    rnum: int = 100, tnum: int = 100, axes: plt.axes = None,
+    def plot_stress(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float],
+                    w: float = 0., comp: str = 'x', rnum: int = 100, tnum: int = 100, axes: plt.axes = None,
                     xbounds: tuple[float, float] = None, ybounds: tuple[float, float] = None,
                     cmap: str = 'jet', cmin: float = None, cmax: float = None) -> None:
         """ Plots stresses
@@ -339,7 +342,7 @@ class MaxStrain(Analysis):
 
     """
 
-    def __init__(self, a_matrix: NDArray[(3, 3), float], thickness: float, diameter: float,
+    def __init__(self, a_matrix: NDArray[Shape['3, 3'], Float], thickness: float, diameter: float,
                  et: dict[int, float] = {}, ec: dict[int, float] = {}, es: dict[int, float] = {}) -> None:
         super(MaxStrain, self).__init__(a_matrix, thickness, diameter)
         self._et, self._ec, self._es = self._equalize_dicts([et, ec, es])
@@ -388,8 +391,8 @@ class MaxStrain(Analysis):
         return dicts
 
     @staticmethod
-    def _strain_margins(strains: NDArray[(Any, 3), float], et: float = None, ec: float = None,
-                        es: float = None) -> NDArray[(Any, 2), float]:
+    def _strain_margins(strains: NDArray[Shape['*, 3'], Float], et: float = None, ec: float = None,
+                        es: float = None) -> NDArray[Shape['*, 2'], Float]:
         r"""Calculates margins of safety
 
         Notes
@@ -429,8 +432,8 @@ class MaxStrain(Analysis):
                 margins[:, 1] = es/xy_strains - 1
         return margins
 
-    def analyze(self, bearing: NDArray[2, float], bypass: NDArray[3, float], rc: float = 0.,
-                num: int = 100, w: float = 0.) -> NDArray[(Any, 6), float]:
+    def analyze(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float], rc: float = 0.,
+                num: int = 100, w: float = 0.) -> NDArray[Shape['*, 6'], Float]:
         """Analyze the joint for a set of loads
 
         Parameters

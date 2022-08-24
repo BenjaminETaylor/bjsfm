@@ -152,6 +152,7 @@ celerybeat-schedule
 env/
 venv/
 ENV/
+conda/
 
 # Spyder project settings
 .spyderproject
