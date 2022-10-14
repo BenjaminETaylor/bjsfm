@@ -20,11 +20,11 @@ sys.path.insert(0, os.path.abspath('../../'))
 # -- Project information -----------------------------------------------------
 
 project = 'bjsfm'
-copyright = '2020, Benjamin E. Taylor'
+copyright = '2022, Benjamin E. Taylor'
 author = 'Benjamin E. Taylor'
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.1'
+release = '0.5.2'
 
 
 # -- General configuration ---------------------------------------------------
@@ -58,7 +58,7 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+# html_static_path = ['_static']
 
 # Change the expectation of top-level file for readthedocs to 'index' instead
 # of 'contents'
