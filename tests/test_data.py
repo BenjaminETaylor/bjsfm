@@ -7,6 +7,12 @@ import numpy as np
 DIAMETER = 0.15  # hole diameter
 STEP_DIST = 0.25  # distance to test away from hole edge (must be >0 for tests to pass)
 
+# additional geometry for broader edge-case coverage against the Fortran reference
+# (a second, larger diameter and several radial step distances exercise the conformal mapping
+#  and xi sign-selection at different a/b ratios and radii)
+DIAMETERS = [0.15, 0.5]
+STEP_DISTS = [0.05, 0.25, 1.0]
+
 ####################################################################################################################
 # test coverage inputs
 ####################################################################################################################
@@ -86,6 +92,33 @@ Y_POINTS = [r * np.sin(theta) for r, theta in
             zip([DIAMETER / 2] * NUM_POINTS, np.linspace(0, 2 * np.pi, num=NUM_POINTS, endpoint=False))]
 Y_POINTS += [r * np.sin(theta) for r, theta in
              zip([DIAMETER / 2 + STEP_DIST] * NUM_POINTS, np.linspace(0, 2 * np.pi, num=NUM_POINTS, endpoint=False))]
+
+
+def make_points(d, step, num=NUM_POINTS):
+    """Build two concentric rings of equally-spaced points for Fortran comparison.
+
+    To match the original BJSFM output the points must be equally spaced around the hole starting at
+    zero degrees, with two rows: one at the hole boundary and another at ``step`` distance away.
+
+    Parameters
+    ----------
+    d : float
+        hole diameter
+    step : float
+        radial distance of the second ring from the hole boundary
+    num : int, optional
+        number of points per ring
+
+    Returns
+    -------
+    x_pnts, y_pnts : list of float
+        cartesian coordinates, boundary ring followed by step-distance ring (length ``2*num``)
+    """
+    r0 = d / 2
+    thetas = np.linspace(0, 2 * np.pi, num=num, endpoint=False)
+    x = np.concatenate([r0 * np.cos(thetas), (r0 + step) * np.cos(thetas)])
+    y = np.concatenate([r0 * np.sin(thetas), (r0 + step) * np.sin(thetas)])
+    return list(x), list(y)
 
 
 

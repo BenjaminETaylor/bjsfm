@@ -1,6 +1,5 @@
 import unittest
 
-import numpy as np
 from numpy.testing import assert_array_almost_equal
 from bjsfm.lekhnitskii import rotate_stress, rotate_strain, LoadedHole, UnloadedHole
 from bjsfm.analysis import MaxStrain
@@ -27,11 +26,11 @@ class TestMaxStrainQuasi(unittest.TestCase):
             es={45: SHEAR_STRN},
         )
         self.assertTrue(analysis.et.keys() == analysis.ec.keys() == analysis.es.keys())
-        self.assertAlmostEquals(analysis.et[0], QUASI_UNT)
-        self.assertAlmostEquals(analysis.et[30], QUASI_UNT)
-        self.assertAlmostEquals(analysis.ec[90], QUASI_UNC)
-        self.assertAlmostEquals(analysis.ec[60], QUASI_UNC)
-        self.assertAlmostEquals(analysis.es[45], SHEAR_STRN)
+        self.assertAlmostEqual(analysis.et[0], QUASI_UNT)
+        self.assertAlmostEqual(analysis.et[30], QUASI_UNT)
+        self.assertAlmostEqual(analysis.ec[90], QUASI_UNC)
+        self.assertAlmostEqual(analysis.ec[60], QUASI_UNC)
+        self.assertAlmostEqual(analysis.es[45], SHEAR_STRN)
         self.assertEqual(analysis.et[90], np.inf)
 
     def test_xy_points(self):
@@ -142,7 +141,10 @@ class TestMaxStrainQuasi(unittest.TestCase):
                 # shear strains
                 xy_strains = np.abs(rotated_strains[:, 2])
                 compare_margins[:, iangle*2+1] = abs(SHEAR_STRN) / xy_strains - 1
-        assert_array_almost_equal(margins, compare_margins)
+        # margins for near-zero strains legitimately blow up to very large (or inf) values, so a
+        # relative tolerance is required; an absolute one (assert_array_almost_equal) is meaningless
+        # at magnitudes of ~1e17.
+        np.testing.assert_allclose(margins, compare_margins, rtol=1e-6)
 
     def test_random_allowables(self):
         rc = 0.15
