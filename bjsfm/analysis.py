@@ -12,7 +12,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from nptyping import NDArray, Shape, Float
 import bjsfm.lekhnitskii as lk
-from bjsfm.plotting import plot_stress
+from bjsfm.plotting import plot_stress, plot_displacement
 
 
 class Analysis:
@@ -294,6 +294,49 @@ class Analysis:
         """
         plot_stress(lk_1=self._unloaded(bearing, bypass, w=w), lk_2=self._loaded(bearing), comp=comp, rnum=rnum,
                     tnum=tnum, axes=axes, xbounds=xbounds, ybounds=ybounds, cmap=cmap, cmin=cmin, cmax=cmax)
+
+    def plot_displacement(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float],
+                          w: float = 0., comp: str = 'x', rnum: int = 100, tnum: int = 100, axes: plt.axes = None,
+                          xbounds: tuple[float, float] = None, ybounds: tuple[float, float] = None,
+                          cmap: str = 'jet', cmin: float = None, cmax: float = None) -> None:
+        """ Plots displacements
+
+        Notes
+        -----
+        colormap options can be found at
+            https://matplotlib.org/3.1.1/tutorials/colors/colormaps.html
+
+        Parameters
+        ----------
+        bearing : array_like
+            1D 1x2 array bearing load [Px, Py] (force)
+        bypass : array_like
+            1D 1x3 array bypass loads [Nx, Ny, Nxy] (force/unit-length)
+        w : float, default 0.
+            pitch or width in bearing load direction
+            (set to 0. for infinite plate)
+        comp : {'x', 'y'}, default 'x'
+            displacement component (u for 'x', v for 'y')
+        rnum : int, default 100
+            number of points to plot along radius
+        tnum : int, default 100
+            number of points to plot along circumference
+        axes : matplotlib.axes, optional
+            a custom axes to plot on
+        xbounds : tuple of int, optional
+            (x0, x1) x-axis bounds, default 6*radius
+        ybounds : tuple of int, optional
+            (y0, y1) y-axis bounds, default 6*radius
+        cmap : str, optional
+            name of any colormap name from matplotlib.pyplot
+        cmin : float, optional
+            minimum value for colormap
+        cmax : float, optional
+            maximum value for colormap
+
+        """
+        plot_displacement(lk_1=self._unloaded(bearing, bypass, w=w), lk_2=self._loaded(bearing), comp=comp, rnum=rnum,
+                          tnum=tnum, axes=axes, xbounds=xbounds, ybounds=ybounds, cmap=cmap, cmin=cmin, cmax=cmax)
 
 
 class MaxStrain(Analysis):

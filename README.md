@@ -38,9 +38,9 @@ https://bjsfm.readthedocs.io
 - [X] Combined bearing and bypass 2D infinite plate stress distribution
 - [X] Optional DeJong tension (or compression) finite width correction
 - [X] Max strain analysis
-- [ ] Plotting
+- [X] Plotting
     - [X] stresses
-    - [ ] displacements
+    - [X] displacements
 - [X] Command-line Interface (CLI)
 
 ## Web App
