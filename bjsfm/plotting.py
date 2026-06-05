@@ -1,7 +1,8 @@
-from typing import Union
+from typing import Optional, Union
 import numpy as np
 import matplotlib.pyplot as plt
-from nptyping import NDArray, Shape, Float
+from matplotlib.axes import Axes
+from bjsfm._typing import FloatArray
 from bjsfm.lekhnitskii import LoadedHole, UnloadedHole
 
 
@@ -11,8 +12,9 @@ DisplacementComponent = Union['x', 'y']
 
 
 def plot_stress(lk_1: HoleObject, lk_2: HoleObject = None, comp: Component = 'x', rnum: int = 100, tnum: int = 100,
-                axes: plt.axes = None, xbounds: tuple[float, float] = None, ybounds: tuple[float, float] = None,
-                cmap: str ='jet', cmin: float = None, cmax: float = None) -> None:
+                axes: Optional[Axes] = None, xbounds: Optional[tuple[float, float]] = None,
+                ybounds: Optional[tuple[float, float]] = None,
+                cmap: str ='jet', cmin: Optional[float] = None, cmax: Optional[float] = None) -> None:
     """ Plots stresses
 
     Notes
@@ -91,9 +93,9 @@ def plot_stress(lk_1: HoleObject, lk_2: HoleObject = None, comp: Component = 'x'
 
 
 def plot_displacement(lk_1: HoleObject, lk_2: HoleObject = None, comp: DisplacementComponent = 'x', rnum: int = 100,
-                      tnum: int = 100, axes: plt.axes = None, xbounds: tuple[float, float] = None,
-                      ybounds: tuple[float, float] = None, cmap: str = 'jet', cmin: float = None,
-                      cmax: float = None) -> None:
+                      tnum: int = 100, axes: Optional[Axes] = None, xbounds: Optional[tuple[float, float]] = None,
+                      ybounds: Optional[tuple[float, float]] = None, cmap: str = 'jet', cmin: Optional[float] = None,
+                      cmax: Optional[float] = None) -> None:
     """ Plots displacements
 
     Notes
@@ -171,9 +173,11 @@ def plot_displacement(lk_1: HoleObject, lk_2: HoleObject = None, comp: Displacem
         plt.show()
 
 
-def plot_bearing_bypass(brg_stress: NDArray[Shape['*'], Float], byp_strain: NDArray[Shape['*'], Float],
-                        brg_allow: float = None, axes: plt.axes = None, xbounds: tuple[float, float] = None,
-                        ybounds: tuple[float, float] = None, color: str = 'C0', label: str = None) -> None:
+def plot_bearing_bypass(brg_stress: FloatArray, byp_strain: FloatArray,
+                        brg_allow: Optional[float] = None, axes: Optional[Axes] = None,
+                        xbounds: Optional[tuple[float, float]] = None,
+                        ybounds: Optional[tuple[float, float]] = None, color: str = 'C0',
+                        label: Optional[str] = None) -> None:
     """ Plots the max-strain bearing-stress vs. bypass-strain failure envelope
 
     Notes

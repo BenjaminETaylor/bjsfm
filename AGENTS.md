@@ -27,8 +27,11 @@ Key data flow: loads are `bearing=[Px, Py]` (force) and `bypass=[Nx, Ny, Nxy]`
 - **Reference every equation.** Docstrings cite source equations like `Eq. 37.5 [2]_`
   (numbered references `[1]_`–`[4]_` are in the `lekhnitskii.py` module docstring). Preserve
   this when adding/editing methods.
-- **Type hints use `nptyping`**: `NDArray[Shape['*, 3'], Float]`, `NDArray[Shape['3, 3'], Float]`.
-  Match existing shape annotations.
+- **Type hints use `numpy.typing`** via the aliases in `bjsfm/_typing.py`
+  (`FloatArray`, `ComplexArray`, `IntArray`, `BoolArray` = `NDArray[np.float64]` etc.;
+  `ArrayLike` for array-like inputs). `numpy.typing` carries the array *dtype* but not its
+  *shape* — document shapes (e.g. `3x3`, `Nx3`) in the docstrings instead. Do **not** add a
+  dependency on the unmaintained `nptyping` package.
 - Stress/strain rotations go through module-level `rotate_stress`, `rotate_strain`,
   `rotate_material_matrix`, `rotate_complex_parameters` — reuse these, don't inline rotation matrices.
 - `MaxStrain._equalize_dicts` forces `et`/`ec`/`es` allowable dicts to share keys (fills
@@ -49,7 +52,7 @@ Key data flow: loads are `bearing=[Px, Py]` (force) and `bypass=[Nx, Ny, Nxy]`
   Python results are validated against this original fortran code (`tests/test_data.py` holds
   shared fixtures like `QUASI`, `DIAMETER`).
 - **Run the CLI**: `python -m bjsfm` (interactive prompts) or the `bjsfm` console script.
-- Targets Python `~=3.9`; deps: `numpy`, `matplotlib`, `nptyping` (see `setup.py`).
+- Targets Python `~=3.9`; deps: `numpy`, `matplotlib` (see `setup.py`).
 
 ## Gotchas
 

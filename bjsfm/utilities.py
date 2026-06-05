@@ -13,12 +13,12 @@ References
 
 """
 import numpy as np
-from nptyping import NDArray, Shape, Float
+from bjsfm._typing import ArrayLike
 
 from bjsfm.lekhnitskii import rotate_material_matrix
 
 
-def orthotropic_stress_concentration(a_inv: NDArray[Shape['3, 3'], Float], angle: float = 0.) -> float:
+def orthotropic_stress_concentration(a_inv: ArrayLike, angle: float = 0.) -> float:
     r"""Stress concentration factor of an infinite orthotropic plate with a circular hole.
 
     Notes

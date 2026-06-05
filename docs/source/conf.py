@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('../../'))
 # -- Project information -----------------------------------------------------
 
 project = 'bjsfm'
-copyright = '2022, Benjamin E. Taylor'
+copyright = '2026, Benjamin E. Taylor'
 author = 'Benjamin E. Taylor'
 
 # The full version, including alpha/beta/rc tags
@@ -47,7 +47,7 @@ templates_path = ['_templates']
 exclude_patterns = []
 
 # required imports
-autodoc_mock_imports = ['numpy', 'matplotlib', 'nptyping']
+autodoc_mock_imports = ['numpy', 'matplotlib']
 
 
 # -- Options for HTML output -------------------------------------------------

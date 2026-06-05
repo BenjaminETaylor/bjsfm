@@ -7,10 +7,10 @@ a third party CLPT package , the parent class `Analysis` can be used to extend t
 Tsai-Hill, etc.
 
 """
-from typing import Any
+from typing import Optional
 import numpy as np
-from matplotlib import pyplot as plt
-from nptyping import NDArray, Shape, Float, Bool
+from matplotlib.axes import Axes
+from bjsfm._typing import FloatArray, BoolArray
 import bjsfm.lekhnitskii as lk
 from bjsfm.plotting import plot_stress, plot_displacement, plot_bearing_bypass
 
@@ -40,13 +40,13 @@ class Analysis:
 
     """
 
-    def __init__(self, a_matrix: NDArray[Shape['3, 3'], Float], thickness: float, diameter: float) -> None:
+    def __init__(self, a_matrix: FloatArray, thickness: float, diameter: float) -> None:
         self.t = thickness
         self.r = diameter/2.
         self.a = np.array(a_matrix, dtype=float)
         self.a_inv = np.linalg.inv(self.a)
 
-    def _loaded(self, bearing: NDArray[Shape['2'], Float]) -> lk.LoadedHole:
+    def _loaded(self, bearing: FloatArray) -> lk.LoadedHole:
         """Lekhnitskii's loaded hole solution
 
         Parameters
@@ -66,7 +66,7 @@ class Analysis:
         p, theta = self.bearing_angle(bearing)
         return lk.LoadedHole(p, d, t, a_inv, theta=theta)
 
-    def _unloaded(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float], w: float = 0.) \
+    def _unloaded(self, bearing: FloatArray, bypass: FloatArray, w: float = 0.) \
             -> lk.UnloadedHole:
         """Lekhnitskii's unloaded hole solution
 
@@ -98,7 +98,7 @@ class Analysis:
         return lk.UnloadedHole(bypass, d, t, a_inv)
 
     def polar_points(self, rc: float = 0., num: int = 100) \
-            -> tuple[NDArray[Shape['*'], Float], NDArray[Shape['*'], Float]]:
+            -> tuple[FloatArray, FloatArray]:
         """Calculates r, theta points
 
         Parameters
@@ -119,7 +119,7 @@ class Analysis:
         return r, theta
 
     def xy_points(self, rc: float = 0., num: int = 100) \
-            -> tuple[NDArray[Shape['*'], Float], NDArray[Shape['*'], Float]]:
+            -> tuple[FloatArray, FloatArray]:
         """Calculates x, y points
 
         Parameters
@@ -140,8 +140,8 @@ class Analysis:
         y = r * np.sin(theta)
         return x, y
 
-    def bearing_front_mask(self, bearing: NDArray[Shape['2'], Float], num: int = 100,
-                           exclusion_angle: float = 0.) -> NDArray[Shape['*'], Bool]:
+    def bearing_front_mask(self, bearing: FloatArray, num: int = 100,
+                           exclusion_angle: float = 0.) -> BoolArray:
         """Boolean keep-mask for analysis points, excluding those in front of the bearing load
 
         Notes
@@ -174,7 +174,7 @@ class Analysis:
         return ang_dist > np.deg2rad(exclusion_angle)
 
     @staticmethod
-    def bearing_angle(bearing: NDArray[Shape['2'], Float]) -> tuple[float, float]:
+    def bearing_angle(bearing: FloatArray) -> tuple[float, float]:
         """Calculates bearing load and angle
 
         Parameters
@@ -195,8 +195,8 @@ class Analysis:
         theta = theta*np.sign(bearing[1]) if bearing[1] else theta
         return p, theta
 
-    def stresses(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float],
-                 rc: float = 0., num: int = 100, w: float = 0.) -> NDArray[Shape['*, 3'], Float]:
+    def stresses(self, bearing: FloatArray, bypass: FloatArray,
+                 rc: float = 0., num: int = 100, w: float = 0.) -> FloatArray:
         """ Calculate stresses
 
         Parameters
@@ -226,8 +226,8 @@ class Analysis:
         brg_stress = brg.stress(x, y)
         return byp_stress + brg_stress
 
-    def strains(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float],
-                rc: float = 0., num: int = 100, w: float = 0.) -> NDArray[Shape['*, 3'], Float]:
+    def strains(self, bearing: FloatArray, bypass: FloatArray,
+                rc: float = 0., num: int = 100, w: float = 0.) -> FloatArray:
         """ Calculate strains
 
         Parameters
@@ -254,8 +254,8 @@ class Analysis:
         strains = self.a_inv @ stresses.T*self.t
         return strains.T
 
-    def displacements(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float],
-                 rc: float = 0., num: int = 100, w: float = 0.) -> NDArray[Shape['*, 2'], Float]:
+    def displacements(self, bearing: FloatArray, bypass: FloatArray,
+                 rc: float = 0., num: int = 100, w: float = 0.) -> FloatArray:
         """ Calculate displacements
 
         Parameters
@@ -285,10 +285,10 @@ class Analysis:
         brg_displacement = brg.displacement(x, y)
         return byp_displacement + brg_displacement
 
-    def plot_stress(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float],
-                    w: float = 0., comp: str = 'x', rnum: int = 100, tnum: int = 100, axes: plt.axes = None,
-                    xbounds: tuple[float, float] = None, ybounds: tuple[float, float] = None,
-                    cmap: str = 'jet', cmin: float = None, cmax: float = None) -> None:
+    def plot_stress(self, bearing: FloatArray, bypass: FloatArray,
+                    w: float = 0., comp: str = 'x', rnum: int = 100, tnum: int = 100, axes: Optional[Axes] = None,
+                    xbounds: Optional[tuple[float, float]] = None, ybounds: Optional[tuple[float, float]] = None,
+                    cmap: str = 'jet', cmin: Optional[float] = None, cmax: Optional[float] = None) -> None:
         """ Plots stresses
 
         Notes
@@ -328,10 +328,10 @@ class Analysis:
         plot_stress(lk_1=self._unloaded(bearing, bypass, w=w), lk_2=self._loaded(bearing), comp=comp, rnum=rnum,
                     tnum=tnum, axes=axes, xbounds=xbounds, ybounds=ybounds, cmap=cmap, cmin=cmin, cmax=cmax)
 
-    def plot_displacement(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float],
-                          w: float = 0., comp: str = 'x', rnum: int = 100, tnum: int = 100, axes: plt.axes = None,
-                          xbounds: tuple[float, float] = None, ybounds: tuple[float, float] = None,
-                          cmap: str = 'jet', cmin: float = None, cmax: float = None) -> None:
+    def plot_displacement(self, bearing: FloatArray, bypass: FloatArray,
+                          w: float = 0., comp: str = 'x', rnum: int = 100, tnum: int = 100, axes: Optional[Axes] = None,
+                          xbounds: Optional[tuple[float, float]] = None, ybounds: Optional[tuple[float, float]] = None,
+                          cmap: str = 'jet', cmin: Optional[float] = None, cmax: Optional[float] = None) -> None:
         """ Plots displacements
 
         Notes
@@ -418,7 +418,7 @@ class MaxStrain(Analysis):
 
     """
 
-    def __init__(self, a_matrix: NDArray[Shape['3, 3'], Float], thickness: float, diameter: float,
+    def __init__(self, a_matrix: FloatArray, thickness: float, diameter: float,
                  et: dict[int, float] = {}, ec: dict[int, float] = {}, es: dict[int, float] = {}) -> None:
         super(MaxStrain, self).__init__(a_matrix, thickness, diameter)
         self._et, self._ec, self._es = self._equalize_dicts([et, ec, es])
@@ -462,8 +462,8 @@ class MaxStrain(Analysis):
         return [{key: d.get(key, np.inf) for key in keys} for d in dicts]
 
     @staticmethod
-    def _strain_margins(strains: NDArray[Shape['*, 3'], Float], et: float = None, ec: float = None,
-                        es: float = None) -> NDArray[Shape['*, 2'], Float]:
+    def _strain_margins(strains: FloatArray, et: Optional[float] = None, ec: Optional[float] = None,
+                        es: Optional[float] = None) -> FloatArray:
         r"""Calculates margins of safety
 
         Notes
@@ -508,8 +508,8 @@ class MaxStrain(Analysis):
                 margins[:, 1] = abs(es)/xy_strains - 1
         return margins
 
-    def analyze(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float], rc: float = 0.,
-                num: int = 100, w: float = 0., exclusion_angle: float = 0.) -> NDArray[Shape['*, 6'], Float]:
+    def analyze(self, bearing: FloatArray, bypass: FloatArray, rc: float = 0.,
+                num: int = 100, w: float = 0., exclusion_angle: float = 0.) -> FloatArray:
         """Analyze the joint for a set of loads
 
         Parameters
@@ -549,9 +549,9 @@ class MaxStrain(Analysis):
         margins[~keep, :] = np.inf
         return margins
 
-    def bearing_bypass_curve(self, brg_allow: float = None, npoints: int = 100, rc: float = 0., num: int = 100,
+    def bearing_bypass_curve(self, brg_allow: Optional[float] = None, npoints: int = 100, rc: float = 0., num: int = 100,
                              w: float = 0., exclusion_angle: float = 0.) \
-            -> tuple[NDArray[Shape['*'], Float], NDArray[Shape['*'], Float]]:
+            -> tuple[FloatArray, FloatArray]:
         r"""Generate the max-strain bearing-stress vs. bypass-strain failure envelope
 
         Notes
@@ -660,10 +660,10 @@ class MaxStrain(Analysis):
         byp_strain = np.append(byp_strain, 0.)
         return brg_stress, byp_strain
 
-    def plot_bearing_bypass(self, brg_allow: float = None, npoints: int = 100, rc: float = 0., num: int = 100,
-                            w: float = 0., exclusion_angle: float = 0., axes: plt.axes = None,
-                            xbounds: tuple[float, float] = None, ybounds: tuple[float, float] = None,
-                            color: str = 'C0', label: str = None) -> None:
+    def plot_bearing_bypass(self, brg_allow: Optional[float] = None, npoints: int = 100, rc: float = 0., num: int = 100,
+                            w: float = 0., exclusion_angle: float = 0., axes: Optional[Axes] = None,
+                            xbounds: Optional[tuple[float, float]] = None, ybounds: Optional[tuple[float, float]] = None,
+                            color: str = 'C0', label: Optional[str] = None) -> None:
         """ Plots the max-strain bearing-stress vs. bypass-strain failure envelope
 
         Parameters
