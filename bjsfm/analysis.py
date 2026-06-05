@@ -10,9 +10,9 @@ Tsai-Hill, etc.
 from typing import Any
 import numpy as np
 from matplotlib import pyplot as plt
-from nptyping import NDArray, Shape, Float
+from nptyping import NDArray, Shape, Float, Bool
 import bjsfm.lekhnitskii as lk
-from bjsfm.plotting import plot_stress, plot_displacement
+from bjsfm.plotting import plot_stress, plot_displacement, plot_bearing_bypass
 
 
 class Analysis:
@@ -139,6 +139,39 @@ class Analysis:
         x = r * np.cos(theta)
         y = r * np.sin(theta)
         return x, y
+
+    def bearing_front_mask(self, bearing: NDArray[Shape['2'], Float], num: int = 100,
+                           exclusion_angle: float = 0.) -> NDArray[Shape['*'], Bool]:
+        """Boolean keep-mask for analysis points, excluding those in front of the bearing load
+
+        Notes
+        -----
+        Points whose polar location is within +/- ``exclusion_angle`` of the bearing load direction
+        (the loaded front of the hole) are excluded (``False``). Returns an all-``True`` mask when no
+        exclusion applies (``exclusion_angle`` is zero/falsy or there is no bearing load).
+
+        Parameters
+        ----------
+        bearing : array_like
+            1D 1x2 array bearing load [Px, Py] (force); sets the front direction
+        num : int, default 100
+            number of points around the hole
+        exclusion_angle : float, default 0.
+            +/- half-angle (degrees) in front of the bearing load to exclude
+
+        Returns
+        -------
+        ndarray
+            1D boolean array of length ``num`` (``True`` = keep)
+
+        """
+        p, brg_theta = self.bearing_angle(np.array(bearing, dtype=float))
+        if not exclusion_angle or p == 0:
+            return np.ones(num, dtype=bool)
+        _, theta = self.polar_points(num=num)
+        # signed angular distance from the bearing direction, wrapped to [-pi, pi]
+        ang_dist = np.abs(np.angle(np.exp(1j*(theta - brg_theta))))
+        return ang_dist > np.deg2rad(exclusion_angle)
 
     @staticmethod
     def bearing_angle(bearing: NDArray[Shape['2'], Float]) -> tuple[float, float]:
@@ -412,8 +445,9 @@ class MaxStrain(Analysis):
 
         Notes
         -----
-        Maintains original contents of each dictionary, fills empty slots with np.inf, does
-        not guarantee the same insertion order in each dictionary
+        Every returned dictionary contains the union of all keys found across the input dictionaries
+        (so each is as long as the longest when the others are subsets). Missing entries are filled
+        with np.inf. New dictionaries are returned; the original inputs are not modified.
 
         Parameters
         ----------
@@ -421,17 +455,11 @@ class MaxStrain(Analysis):
 
         Returns
         -------
-        list of dictionaries that are equal in size and contain the same keys (without modifying original contents)
+        list of dictionaries that are equal in size and contain the same keys
 
         """
-        for d in dicts:
-            others = dicts.copy()
-            others.remove(d)
-            for od in others:
-                for key in d:
-                    if key not in od:
-                        od[key] = np.inf
-        return dicts
+        keys = set().union(*dicts) if dicts else set()
+        return [{key: d.get(key, np.inf) for key in keys} for d in dicts]
 
     @staticmethod
     def _strain_margins(strains: NDArray[Shape['*, 3'], Float], et: float = None, ec: float = None,
@@ -440,7 +468,10 @@ class MaxStrain(Analysis):
 
         Notes
         -----
-        Assumes strains and allowables are all in same orientation (no rotations occur)
+        Assumes strains and allowables are all in same orientation (no rotations occur). Any
+        combination of allowables may be supplied; a mode whose allowable is omitted (``None``) is
+        skipped and reported with an infinite margin. Tension is checked against positive normal
+        strains, compression against negative normal strains, and shear against the shear strains.
 
         Parameters
         ----------
@@ -456,27 +487,29 @@ class MaxStrain(Analysis):
         Returns
         -------
         margins : ndarray
-            2D nx2 array [[tens./comp. margin, shear margin], ...]
+            2D nx2 array [[tens. or comp. margin, shear margin], ...]
 
         """
         margins = np.empty((strains.shape[0], 2))
         margins[:] = np.inf
+        x_strains = strains[:, 0]
         with np.errstate(divide='ignore'):
-            # tension/compression
-            if et and ec:
-                x_strains = strains[:, 0]
-                margins[:, 0] = np.select(
-                    [x_strains > 0, x_strains < 0], [et/x_strains - 1, -abs(ec)/x_strains - 1])
+            # tension (checked only against positive normal strains)
+            if et:
+                tension = x_strains > 0
+                margins[tension, 0] = et/x_strains[tension] - 1
+            # compression (checked only against negative normal strains)
+            if ec:
+                compression = x_strains < 0
+                margins[compression, 0] = -abs(ec)/x_strains[compression] - 1
             # shear
             if es:
                 xy_strains = np.abs(strains[:, 2])
-                # i_nz = np.nonzero(xy_strains)
-                es = abs(es)
-                margins[:, 1] = es/xy_strains - 1
+                margins[:, 1] = abs(es)/xy_strains - 1
         return margins
 
     def analyze(self, bearing: NDArray[Shape['2'], Float], bypass: NDArray[Shape['3'], Float], rc: float = 0.,
-                num: int = 100, w: float = 0.) -> NDArray[Shape['*, 6'], Float]:
+                num: int = 100, w: float = 0., exclusion_angle: float = 0.) -> NDArray[Shape['*, 6'], Float]:
         """Analyze the joint for a set of loads
 
         Parameters
@@ -492,6 +525,9 @@ class MaxStrain(Analysis):
         w : float, default 0.
             pitch or width in bearing load direction
             (set to 0. for infinite plate)
+        exclusion_angle : float, default 0.
+            +/- half-angle (degrees) in front of the bearing load to exclude from the checks
+            (excluded points are reported with infinite margin)
 
         Returns
         -------
@@ -508,7 +544,159 @@ class MaxStrain(Analysis):
             allowables = {'et': et[angle], 'ec': ec[angle], 'es': es[angle]}
             rotated_strains = lk.rotate_strain(strains, angle=np.deg2rad(angle))
             margins[:, idx:idx+2] = self._strain_margins(rotated_strains, **allowables)
+        # exclude points in front of the bearing load (report infinite margin so they never govern)
+        keep = self.bearing_front_mask(bearing, num=num, exclusion_angle=exclusion_angle)
+        margins[~keep, :] = np.inf
         return margins
+
+    def bearing_bypass_curve(self, brg_allow: float = None, npoints: int = 100, rc: float = 0., num: int = 100,
+                             w: float = 0., exclusion_angle: float = 0.) \
+            -> tuple[NDArray[Shape['*'], Float], NDArray[Shape['*'], Float]]:
+        r"""Generate the max-strain bearing-stress vs. bypass-strain failure envelope
+
+        Notes
+        -----
+        Bearing and bypass loads are applied collinearly along the x-axis. By linearity the strain at
+        any location/ply is the superposition of a unit-bearing-stress field and a unit-bypass-strain
+        field, so the *combined* in-plane strain is ``brg*s + byp*e`` for bearing stress ``s`` and
+        bypass strain ``e``. Every check uses this combined strain (bearing and bypass strains are
+        never separated), so a ply may fail under bearing strains alone.
+
+        For every ply direction at every location the combined fiber-axis strain is checked against
+        all three max-strain modes, each with its own directional allowable: tension
+        (:math: `\epsilon_x \le e_t`), compression (:math: `\epsilon_x \ge -e_c`) and shear
+        (:math: `|\gamma_{xy}| \le e_s`). Each criterion is linear in ``e``,
+
+        .. math:: c\,e \le A - B\,s
+
+        so for a fixed bearing stress the largest admissible (tension) bypass strain is
+        ``e(s) = min over c > 0 of (A - B s)/c``. The envelope is swept from zero bearing up to the
+        bearing stress at which a load first fails any mode with no bypass (``e = 0``), or up to
+        ``brg_allow`` if that is smaller, and is closed down to the bearing-stress axis at that end.
+
+        Only tension bypass (``e >= 0``) is applied. Bearing stress is :math: `P/(D \cdot t)` and
+        bypass strain is the far-field applied strain :math: `a^{-1}_{00} N_x`.
+
+        Parameters
+        ----------
+        brg_allow : float, optional
+            bearing stress allowable; cuts the envelope off at this bearing stress when supplied
+        npoints : int, default 100
+            number of bearing-stress steps sampled along the envelope
+        rc : float, default 0.
+            characteristic distance
+        num : int, default 100
+            number of points to check around hole
+        w : float, default 0.
+            pitch or width in bearing load direction
+            (set to 0. for infinite plate)
+        exclusion_angle : float, default 0.
+            +/- half-angle (degrees) in front of the bearing load to exclude from the checks
+
+        Returns
+        -------
+        brg_stress, byp_strain : ndarray
+            1D arrays describing the (closed) failure envelope
+
+        """
+        diameter = self.r*2
+        t = self.t
+        a00 = self.a_inv[0, 0]
+        et, ec, es = self._et, self._ec, self._es
+
+        # unit strain fields (linear superposition): per unit bearing stress and per unit bypass strain
+        brg_field = self.strains([diameter*t, 0.], [0., 0., 0.], rc=rc, num=num, w=w)
+        byp_field = self.strains([0., 0.], [1./a00 if a00 else 0., 0., 0.], rc=rc, num=num, w=w)
+
+        # exclude points in front of the bearing load (applied along +x here) from the checks
+        keep = self.bearing_front_mask([1., 0.], num=num, exclusion_angle=exclusion_angle)
+
+        # Assemble every provided max-strain criterion as a line  c*e <= A - B*s  over all
+        # locations/plies. c (coef) is the bypass sensitivity, B the bearing sensitivity, A the
+        # directional allowable. A criterion is added only when its allowable is finite (i.e. the
+        # user provided it), so any combination of tension/compression/shear allowables is supported.
+        coef, A, B = [], [], []
+        for angle in self.angles:
+            rad = np.deg2rad(angle)
+            rb = lk.rotate_strain(brg_field, angle=rad)  # combined-strain bearing part, ply axes
+            rp = lk.rotate_strain(byp_field, angle=rad)  # combined-strain bypass part, ply axes
+            bn, bg = rb[keep, 0], rb[keep, 2]  # normal (eps_x) and shear (gamma_xy) per unit bearing stress
+            pn, pg = rp[keep, 0], rp[keep, 2]  # normal and shear per unit bypass strain
+            ones = np.ones_like(bn)
+            et_a, ec_a, es_a = et[angle], abs(ec[angle]), abs(es[angle])
+            if np.isfinite(et_a):   # tension      eps_x <= et   -> pn*e <= et - bn*s
+                coef.append(pn);  A.append(et_a*ones); B.append(bn)
+            if np.isfinite(ec_a):   # compression  eps_x >= -ec  -> -pn*e <= ec + bn*s
+                coef.append(-pn); A.append(ec_a*ones); B.append(-bn)
+            if np.isfinite(es_a):   # shear        |gam_xy| <= es
+                coef.append(pg);  A.append(es_a*ones); B.append(bg)   # gam_xy <= es  -> pg*e <= es - bg*s
+                coef.append(-pg); A.append(es_a*ones); B.append(-bg)  # gam_xy >= -es -> -pg*e <= es + bg*s
+        if not coef:  # no allowables provided -> no failure envelope to draw
+            return np.array([]), np.array([])
+        coef = np.concatenate(coef)
+        A = np.concatenate(A)
+        B = np.concatenate(B)
+
+        # bearing stress at which a load first fails any mode with no bypass (rhs A - B*s reaches 0)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            s_fail = np.where(B > 0, A/B, np.inf)
+        s0 = np.min(s_fail)
+        s_end = min(s0, brg_allow) if brg_allow is not None else s0
+        if not np.isfinite(s_end):  # nothing limits bearing and no allowable supplied
+            return np.array([]), np.array([])
+
+        # largest admissible tension bypass strain at each bearing stress: min over c > 0 of (A-B*s)/c
+        up = coef > 0
+        if not np.any(up):  # no provided mode is aggravated by bypass -> envelope unbounded by strain
+            return np.array([]), np.array([])
+        cu, Au, Bu = coef[up], A[up], B[up]
+        brg_stress = np.linspace(0., s_end, num=npoints)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            e = (Au[None, :] - np.outer(brg_stress, Bu))/cu[None, :]
+        byp_strain = np.maximum(np.min(e, axis=1), 0.)
+
+        # close the envelope down to the bearing-stress axis at the right end (bearing cutoff/failure)
+        brg_stress = np.append(brg_stress, brg_stress[-1])
+        byp_strain = np.append(byp_strain, 0.)
+        return brg_stress, byp_strain
+
+    def plot_bearing_bypass(self, brg_allow: float = None, npoints: int = 100, rc: float = 0., num: int = 100,
+                            w: float = 0., exclusion_angle: float = 0., axes: plt.axes = None,
+                            xbounds: tuple[float, float] = None, ybounds: tuple[float, float] = None,
+                            color: str = 'C0', label: str = None) -> None:
+        """ Plots the max-strain bearing-stress vs. bypass-strain failure envelope
+
+        Parameters
+        ----------
+        brg_allow : float, optional
+            bearing stress allowable; cuts the envelope off at this bearing stress when supplied
+        npoints : int, default 100
+            number of bearing-stress steps sampled along the envelope
+        rc : float, default 0.
+            characteristic distance
+        num : int, default 100
+            number of points to check around hole
+        w : float, default 0.
+            pitch or width in bearing load direction
+            (set to 0. for infinite plate)
+        exclusion_angle : float, default 0.
+            +/- half-angle (degrees) in front of the bearing load to exclude from the checks
+        axes : matplotlib.axes, optional
+            a custom axes to plot on
+        xbounds : tuple of float, optional
+            (x0, x1) x-axis bounds
+        ybounds : tuple of float, optional
+            (y0, y1) y-axis bounds
+        color : str, optional
+            line color (any matplotlib color)
+        label : str, optional
+            legend label for the curve
+
+        """
+        brg_stress, byp_strain = self.bearing_bypass_curve(
+            brg_allow=brg_allow, npoints=npoints, rc=rc, num=num, w=w, exclusion_angle=exclusion_angle)
+        plot_bearing_bypass(brg_stress, byp_strain, brg_allow=brg_allow, axes=axes,
+                            xbounds=xbounds, ybounds=ybounds, color=color, label=label)
 
 
 

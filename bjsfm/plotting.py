@@ -1,6 +1,7 @@
 from typing import Union
 import numpy as np
 import matplotlib.pyplot as plt
+from nptyping import NDArray, Shape, Float
 from bjsfm.lekhnitskii import LoadedHole, UnloadedHole
 
 
@@ -166,6 +167,60 @@ def plot_displacement(lk_1: HoleObject, lk_2: HoleObject = None, comp: Displacem
     ax.set_xlim(xbounds[0], xbounds[1])
     ax.set_ylim(ybounds[0], ybounds[1])
     ax.set_title(f'Python bjsfm Displacement:\n {comp} dir displacement')
+    if not axes:
+        plt.show()
+
+
+def plot_bearing_bypass(brg_stress: NDArray[Shape['*'], Float], byp_strain: NDArray[Shape['*'], Float],
+                        brg_allow: float = None, axes: plt.axes = None, xbounds: tuple[float, float] = None,
+                        ybounds: tuple[float, float] = None, color: str = 'C0', label: str = None) -> None:
+    """ Plots the max-strain bearing-stress vs. bypass-strain failure envelope
+
+    Notes
+    -----
+    The (bearing stress, bypass strain) points describe a closed max-strain failure envelope built
+    from combined bearing + bypass strains (tension, compression and shear). When ``brg_allow`` is
+    supplied a dashed vertical line marks the bearing-stress cutoff.
+
+    Parameters
+    ----------
+    brg_stress : array_like
+        1D array of bearing stresses (x-axis), e.g. from ``MaxStrain.bearing_bypass_curve``
+    byp_strain : array_like
+        1D array of bypass strains (y-axis), e.g. from ``MaxStrain.bearing_bypass_curve``
+    brg_allow : float, optional
+        bearing stress allowable; drawn as a dashed vertical cutoff line when supplied
+    axes : matplotlib.axes, optional
+        a custom axes to plot on
+    xbounds : tuple of float, optional
+        (x0, x1) x-axis bounds
+    ybounds : tuple of float, optional
+        (y0, y1) y-axis bounds
+    color : str, optional
+        line color (any matplotlib color)
+    label : str, optional
+        legend label for the curve
+
+    """
+    brg_stress = np.asarray(brg_stress, dtype=float)
+    byp_strain = np.asarray(byp_strain, dtype=float)
+
+    if not axes:
+        fig, ax = plt.subplots()
+    else:
+        ax = axes
+        fig = ax.figure
+
+    ax.plot(brg_stress, byp_strain, color=color, label=label)
+    if brg_allow is not None:
+        ax.axvline(brg_allow, color='k', linestyle='--', linewidth=0.8)
+    ax.set_xlim(xbounds if xbounds else (0., None))
+    ax.set_ylim(ybounds if ybounds else (0., None))
+    ax.set_xlabel('Bearing Stress')
+    ax.set_ylabel('Bypass Strain')
+    ax.set_title('Python bjsfm Bearing/Bypass Diagram')
+    if label:
+        ax.legend()
     if not axes:
         plt.show()
 

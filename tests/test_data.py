@@ -73,11 +73,11 @@ SHEAR_STRN = 16.56e3/0.68e6
 QUASI_UNT = 99.35e3/E_QUASI
 QUASI_UNC = 57.68e3/E_QUASI
 
-HARD_UNT = 174.18/E_HARD
-HARD_UNC = 79.42/E_HARD
+HARD_UNT = 174.18e3/E_HARD
+HARD_UNC = 79.42e3/E_HARD
 
-SOFT_UNT = 54.17/E_HARD
-SOFT_UNC = 40.61/E_HARD
+SOFT_UNT = 54.17e3/E_SOFT
+SOFT_UNC = 40.61e3/E_SOFT
 
 ####################################################################################################################
 # test point inputs
